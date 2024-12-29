@@ -3,8 +3,8 @@ import { OverviewComponent } from './Sections/overview/overview.component';
 
 export const routes: Routes = [
   {
-    title: "",
-    path: 'overview',
+    title: "Overview",
+    path: '',
     component: OverviewComponent
   },
   {

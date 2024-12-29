@@ -2,11 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { ChartsTemplateComponent } from "../../Components/charts-template/charts-template.component";
 import { StampingStationAComponent } from "./Individual_Stations/stamping-station-a/stamping-station-a.component";
+import { StampingStationBComponent } from "./Individual_Stations/stamping-station-b/stamping-station-b.component";
+import { SlotPaperInsertionAutoComponent } from "./Individual_Stations/slot-paper-insertion-auto/slot-paper-insertion-auto.component";
+
 
 @Component({
   selector: 'app-stations',
   standalone: true,
-  imports: [CommonModule, ChartsTemplateComponent, StampingStationAComponent],
+  imports: [CommonModule, ChartsTemplateComponent, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent],
   templateUrl: './stations.component.html',
   styleUrl: './stations.component.scss'
 })

@@ -22,10 +22,10 @@ export class ChartsTemplateComponent implements OnInit {
 
   private intervalSubscription: Subscription | null = null;
 
+  dataCount:number = 12
+
   hourLabel:any = []
   hourData:any = []
-
-  letCount:number = 0
 
   dayLabel:any = []
   dayData:any = []
@@ -82,12 +82,14 @@ export class ChartsTemplateComponent implements OnInit {
       this.isShiftWiseReport = true
       this.isMonthWiseReport = true
       this.fourGrid = true
+      this.dataCount = 12
       return
     }
     this.chartRoute[order].isOpen = true
     let tag = this.chartRoute[order].tag
 
     if(tag === "hour") {
+      this.dataCount = 20
       this.fourGrid = false
       this.isHourlyReport = true
       this.isDayWiseReport = false
@@ -96,6 +98,7 @@ export class ChartsTemplateComponent implements OnInit {
     }
 
     else if(tag === "day") {
+      this.dataCount = 20
       this.fourGrid = false
       this.isHourlyReport = false
       this.isDayWiseReport = true
@@ -104,6 +107,7 @@ export class ChartsTemplateComponent implements OnInit {
     }
 
     else if(tag === "shift") {
+      this.dataCount = 20
       this.fourGrid = false
       this.isHourlyReport = false
       this.isDayWiseReport = false
@@ -112,6 +116,7 @@ export class ChartsTemplateComponent implements OnInit {
     }
 
     else if(tag === "month") {
+      this.dataCount = 20
       this.fourGrid = false
       this.isHourlyReport = false
       this.isDayWiseReport = false
@@ -130,7 +135,7 @@ export class ChartsTemplateComponent implements OnInit {
     // Need to add header
     this.intervalSubscription = interval(1000).subscribe(() => {
       this.sw.fetchChartData('chart-data').subscribe((data:any)=> {
-        if(this.hourLabel.length > 20) {
+        if(this.hourLabel.length > this.dataCount) {
           this.hourLabel.shift()
           this.hourData.shift()
         }
@@ -142,7 +147,7 @@ export class ChartsTemplateComponent implements OnInit {
       })
 
       this.sw.fetchChartData('chart-data').subscribe((data:any)=> {
-        if(this.shiftLabel.length > 20) {
+        if(this.shiftLabel.length > this.dataCount) {
           this.dayLabel.shift()
           this.dayData.shift()
         }
@@ -153,7 +158,7 @@ export class ChartsTemplateComponent implements OnInit {
       })
 
       this.sw.fetchChartData('chart-data').subscribe((data:any)=> {
-        if(this.shiftLabel.length > 20) {
+        if(this.shiftLabel.length > this.dataCount) {
           this.shiftLabel.shift()
           this.shiftData.shift()
         }
@@ -164,7 +169,7 @@ export class ChartsTemplateComponent implements OnInit {
       })
 
       this.sw.fetchChartData('chart-data').subscribe((data:any)=> {
-        if(this.monthLabel.length > 20) {
+        if(this.monthLabel.length > this.dataCount) {
           this.monthLabel.shift()
           this.monthData.shift()
         }
