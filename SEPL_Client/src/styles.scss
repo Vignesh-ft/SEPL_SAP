@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@font-face {
+  font-family: 'Graphik';
+  src: url("./assets/Fonts/GraphikRegular.otf") format("opentype");
+  font-weight: 400; /* Use numeric value for medium */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Graphik';
+  src: url("./assets/Fonts/GraphikMedium.otf") format("opentype");
+  font-weight: 500; /* Use numeric value for medium */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Graphik';
+  src: url("./assets/Fonts/GraphikSemibold.otf") format("opentype");
+  font-weight: 600; /* Semibold is usually 600 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Graphik';
+  src: url("./assets/Fonts/GraphikBold.otf") format("opentype");
+  font-weight: 700; /* Bold is usually 700 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Graphik';
+  src: url("./assets/Fonts/GraphikSuper.otf") format("opentype");
+  font-weight: 900; /* Use numeric value for bolder */
+  font-style: normal;
+}
+
+/* Apply the base font-family */
+* {
+  font-family: 'Graphik', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+::-webkit-scrollbar{
+  width: 0px;
+}

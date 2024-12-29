@@ -1,0 +1,13 @@
+<div class="flex items-center justify-between gap-20 px-20 w-screen h-[70px] bg-[#DA2020]">
+  <!-- Logo -->
+  <img src="../../../assets/Logo/Logo_Vertical.png" alt="Logo" class="h-[80%] max-h-[70px]">
+
+
+  <span class="flex items-center justify-center w-auto">
+    @for (route of routes; track route) {
+      <a [routerLink]="[route.path]" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="flex font-bold w-[180px] rounded-md py-5 text-[13px] items-center justify-center">
+        {{route.name}}
+      </a>
+    }
+  </span>
+</div>

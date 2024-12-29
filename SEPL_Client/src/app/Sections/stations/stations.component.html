@@ -1,0 +1,33 @@
+<div class="w-screen h-screen flex items-start justify-start pt-[70px] overflow-hidden">
+
+  <div class="w-[20%] max-w-[265px] h-full bg-white pt-5 border-r-2 z-40">
+    @for (option of options; track option) {
+
+      <span (click)="changeMain(option.order)" (mouseover)="option.isDDOpen = true" (mouseleave)="option.isDDOpen = false"  [ngClass]="{'bg-[#DA2020] text-white hover:bg-[#DA2020]': option.isOpen}" class="flex items-center justify-start w-full py-5 pl-7 hover:bg-[#DA202040] cursor-pointer duration-300 relative">
+        <p class="flex items-center justify-start font-semibold text-[13px] w-full">{{option.name}}</p>
+
+
+        <span *ngIf="option.isDDOpen && option.isDropDown" class="flex flex-col z-30 w-[200px] bg-white absolute left-full top-0 h-auto border-2">
+          @for (opt of option.ddOptions; track opt) {
+            <p [ngClass]="{
+              'bg-[#DA2020] text-white hover:bg-[#DA2020]': option.isOpen && opt.isOpen,
+              'text-black':option.isOpen && !opt.isOpen}"
+              (click)="changeSubMain(option.order, opt.order)"
+              class="flex items-center justify-start font-semibold text-[13px] py-5 pl-7 w-full hover:bg-[#DA202040] cursor-pointer duration-300 ">
+              {{opt.name}}
+            </p>
+          }
+        </span>
+      </span>
+
+    }
+  </div>
+
+  <div class="w-full h-full">
+    @if(options[0].isOpen && options[0].ddOptions[0].isOpen) {
+      <app-stamping-station-a class="w-full h-full"></app-stamping-station-a>
+    }
+  </div>
+
+
+</div>
