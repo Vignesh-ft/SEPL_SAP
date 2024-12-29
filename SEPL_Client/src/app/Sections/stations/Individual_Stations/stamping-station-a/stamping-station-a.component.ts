@@ -10,4 +10,5 @@ import { ChartsTemplateComponent } from "../../../../Components/charts-template/
 })
 export class StampingStationAComponent {
   title:any = "STAMPING STATION A"
+  endPoint:string = "stamping-station-a"
 }

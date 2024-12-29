@@ -2,6 +2,7 @@ import { Component, Input, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { ChartModule } from 'primeng/chart';
 import { interval, Subscription } from 'rxjs';
 import { ChartAPIService } from '../../Services/chart-api.service';
+import { chartColors } from '../../../assets/colors/chartColor';
 
 @Component({
   selector: 'app-chart',
@@ -18,62 +19,84 @@ export class ChartComponent implements OnInit {
   @Input() refreshInterval:number = 1000
   @Input() label:any
   @Input() value:any
+  @Input() legend:any
+
+  rotorSum:any = []
+  statorSum:any = []
 
   private intervalSubscription: Subscription | null = null;
-  chartData: any = [[], []];
+  // chartData: any = [[], []];
   data: any;
   options: any;
   type:string = "line"
+  colors:any
 
   constructor(private sw: ChartAPIService) {}
 
   ngOnInit(): void {
-    this.initializeChart();
+    // console.log(this.value, this.label);
+
+
+    if(this.lineColors === "hour"){
+      this.colors = chartColors.hourReport
+    }
+    else if(this.lineColors === "day") {
+      this.colors = chartColors.dayReport
+    }
+    else if (this.lineColors === "shift") {
+      this.colors = chartColors.shiftReport
+    }
+    else if (this.lineColors === "month") {
+      this.colors = chartColors.monthReport
+    }
+
     this.updateChart()
+    // this.distributeValue(this.value)
+    this.initializeChart();
+
   }
-
-  // ngAfterViewInit(): void {
-  //   this.intervalSubscription = interval(this.refreshInterval).subscribe(() => {
-  //     this.sw.fetchChartData(this.endPoint).subscribe((chart: any) => {
-  //       this.chartData[0].push(chart.time);
-  //       this.chartData[1].push(chart.value);
-
-  //       this.updateChart();
-
-  //       if (this.chartData[0].length > 10) {
-  //         // Keep only the last 10 points
-  //         this.chartData[0].shift();
-  //         this.chartData[1].shift();
-  //       }
-  //     });
-  //   });
-
-  // }
 
   ngAfterViewInit(): void {
-    //Called after ngAfterContentInit when the component's view has been initialized. Applies to components only.
-    //Add 'implements AfterViewInit' to the class.
     this.updateChart()
+    this.intervalSubscription = interval(1000).subscribe(() => {
+        this.updateChart();
+        this.data.labels = this.label
+        this.data.datasets[0].data = this.value[0]
+        this.data.datasets[1].data = this.value[1]
+      });
   }
+  
 
   initializeChart(): void {
     this.data = {
-      labels: this.label,
+      labels: [],
       datasets: [
         {
-          data: this.value,
+          label: "Rotor Count",
+          data: [],
           fill: false,
-          borderColor: this.lineColors,
-          tension: 0
-        }
+          borderColor: this.colors[0],
+          tension: 0.4
+        },
+        {
+          label: "Stator Count",
+          data: [],
+          fill: false,
+          borderColor: this.colors[1],
+          tension: 0.4
+        },
       ]
     };
 
     this.options = {
       responsive: true,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
       plugins: {
         legend: {
-          display: false, // Disable legend correctly in Chart.js v4
+          display: this.legend, // Disable legend correctly in Chart.js v4
         },
       },
       scales: {
@@ -102,21 +125,25 @@ export class ChartComponent implements OnInit {
         },
       },
     };
+
+    this.updateChart()
   }
 
 
 
   updateChart(): void {
     let interVal = interval(1000).subscribe(()=> {
+      
       if(this.primeChart && this.primeChart.chart) {
+        // console.log("chart Updated");
         this.primeChart.chart.update()
       }
-
-        // if (this.label.length > 15) {
-        //   console.log("Shifted")
-        //   this.label.shift();
-        //   this.value.shift();
-        // }
+        if (this.label.length > 15) {
+          console.log("Shifted")
+          this.label.shift();
+          this.rotorSum.shift();
+          this.statorSum.shift()
+        }
     })
   }
 

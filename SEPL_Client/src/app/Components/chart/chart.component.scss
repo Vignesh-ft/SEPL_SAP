@@ -1,0 +1,37 @@
+.fadeIn {
+    animation: zoomIn 0.3s linear forwards;
+}
+
+@keyframes zoomIn {
+    0% {
+        scale: 0.93;
+        opacity: 0.1;
+    }
+    
+    100% {
+        scale: 1;
+        opacity: 1;
+    }
+}
+
+
+.slideIn {
+    animation: slideIn 0.4s linear forwards;
+}
+
+@keyframes slideIn {
+
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.1;
+        transform: translateX(-50%);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

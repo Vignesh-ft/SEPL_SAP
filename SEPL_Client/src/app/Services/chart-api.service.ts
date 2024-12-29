@@ -9,6 +9,6 @@ export class ChartAPIService {
   constructor(private http:HttpClient) { }
 
   fetchChartData(fetchFrom:any):Observable<any> {
-    return this.http.get<any>(`http://localhost:3000/${fetchFrom}`)
+    return this.http.get<any>(`http://localhost:3000/api/${fetchFrom}`)
   }
 }

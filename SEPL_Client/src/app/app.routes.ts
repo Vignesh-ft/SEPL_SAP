@@ -8,13 +8,14 @@ export const routes: Routes = [
     component: OverviewComponent
   },
   {
-    title: "Overview",
-    path: 'overview',
-    component: OverviewComponent
-  },
-  {
     title: "Stations",
     path: "stations",
     loadComponent: ()=> import("../app/Sections/stations/stations.component").then((m)=> m.StationsComponent)
+  },
+  {
+    title: "Overview",
+    path: '**',
+    redirectTo: '/',
+    // component: OverviewComponent
   }
 ];
