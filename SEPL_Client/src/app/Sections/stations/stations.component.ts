@@ -1,15 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { ChartsTemplateComponent } from "../../Components/charts-template/charts-template.component";
 import { StampingStationAComponent } from "./Individual_Stations/stamping-station-a/stamping-station-a.component";
 import { StampingStationBComponent } from "./Individual_Stations/stamping-station-b/stamping-station-b.component";
 import { SlotPaperInsertionAutoComponent } from "./Individual_Stations/slot-paper-insertion-auto/slot-paper-insertion-auto.component";
-
+import { SlotPaperInsertionMannualComponent } from "./Individual_Stations/slot-paper-insertion-mannual/slot-paper-insertion-mannual.component";
+import { ContinuityTestAutoComponent } from "./Individual_Stations/continuity-test-auto/continuity-test-auto.component";
+import { ContinuityTestMannualComponent } from "./Individual_Stations/continuity-test-mannual/continuity-test-mannual.component";
+import { SpTestAutoComponent } from "./Individual_Stations/sp-test-auto/sp-test-auto.component";
+import { SpTestMannualComponent } from "./Individual_Stations/sp-test-mannual/sp-test-mannual.component";
+import { VarnishStatorAssemblyComponent } from "./Individual_Stations/varnish-stator-assembly/varnish-stator-assembly.component";
+import { FinalAssemblyComponent } from "./Individual_Stations/final-assembly/final-assembly.component";
 
 @Component({
   selector: 'app-stations',
   standalone: true,
-  imports: [CommonModule, ChartsTemplateComponent, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent],
+  imports: [CommonModule, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent, SlotPaperInsertionMannualComponent, ContinuityTestAutoComponent, ContinuityTestMannualComponent, SpTestAutoComponent, SpTestMannualComponent, VarnishStatorAssemblyComponent, FinalAssemblyComponent],
   templateUrl: './stations.component.html',
   styleUrl: './stations.component.scss'
 })
