@@ -20,6 +20,8 @@ export class ChartComponent implements OnInit {
   @Input() label:any
   @Input() value:any
   @Input() legend:any
+  @Input() showValue:any
+  @Input() type:any | "line"
 
   rotorSum:any = []
   statorSum:any = []
@@ -28,14 +30,12 @@ export class ChartComponent implements OnInit {
   // chartData: any = [[], []];
   data: any;
   options: any;
-  type:string = "line"
   colors:any
 
   constructor(private sw: ChartAPIService) {}
 
   ngOnInit(): void {
     // console.log(this.value, this.label);
-
 
     if(this.lineColors === "hour"){
       this.colors = chartColors.hourReport
@@ -63,9 +63,12 @@ export class ChartComponent implements OnInit {
         this.data.labels = this.label
         this.data.datasets[0].data = this.value[0]
         this.data.datasets[1].data = this.value[1]
+
+        console.log("Chart js", this.value);
+
       });
   }
-  
+
 
   initializeChart(): void {
     this.data = {
@@ -76,6 +79,7 @@ export class ChartComponent implements OnInit {
           data: [],
           fill: false,
           borderColor: this.colors[0],
+          backgroundColor: this.colors[0],
           tension: 0.4
         },
         {
@@ -83,6 +87,7 @@ export class ChartComponent implements OnInit {
           data: [],
           fill: false,
           borderColor: this.colors[1],
+          backgroundColor: this.colors[1],
           tension: 0.4
         },
       ]
@@ -133,12 +138,12 @@ export class ChartComponent implements OnInit {
 
   updateChart(): void {
     let interVal = interval(1000).subscribe(()=> {
-      
+
       if(this.primeChart && this.primeChart.chart) {
         // console.log("chart Updated");
         this.primeChart.chart.update()
       }
-        if (this.label.length > 15) {
+        if (this.label.length > this.showValue) {
           console.log("Shifted")
           this.label.shift();
           this.rotorSum.shift();
