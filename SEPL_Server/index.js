@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const { processData, router } = require('./controllers/moController'); // Import processData and router from the controller
+const { router } = require('./controllers/moController'); // Import processData and router from the controller
+
 
 const app = express();
 const PORT = 3000;

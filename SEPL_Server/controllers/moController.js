@@ -94,7 +94,6 @@ router.post('/:stationName/hourly', async (req, res) => {
   }
 });
 
-
 //daywise - stamping stations
 function dateFilterWithMissingDates(data, fromDate, toDate) {
   // Initialize an object to store the sum of rotor_count and stator_count for each day
@@ -417,8 +416,8 @@ router.post('/:stationName/monthWise', async (req, res) => {
     // Step 3: Format the response
     const formattedResponse = aggregatedData.map(monthData => ({
       month: `${monthData.month} ${monthData.year}`,
-      rotor_sum: monthData.rotor_count,
-      stator_sum: monthData.stator_count,
+      rotor_sum: monthData.rotor_sum,
+      stator_sum: monthData.stator_sum,
     }));
 
     const monthLabels = []
@@ -440,11 +439,7 @@ router.post('/:stationName/monthWise', async (req, res) => {
   }
 });
 
-
 // Main function to log in, fetch data, and compareq
-const processData = async () => {
-  await fetch_Stamping_Station_A_Data();
-};
 
-module.exports = { processData, router };
+module.exports = { router };
 
