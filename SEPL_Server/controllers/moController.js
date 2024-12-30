@@ -152,8 +152,7 @@ function dateFilterWithMissingDates(data, fromDate, toDate) {
 }
 
 const fetchTableForDay = async (stationName, fromDate, toDate) => {
-  console.log(stationName);
-
+  
   // Format the dates for comparison
   const formatDate = (date) => {
     const d = new Date(date);
@@ -173,23 +172,17 @@ const fetchTableForDay = async (stationName, fromDate, toDate) => {
     ORDER BY date;
   `;
   
-
   try {
-    console.log("Formatted from date:", formattedFromDate);
-    console.log("Formatted to date:", formattedToDate);
+              // Adjust date to handle time zone difference
+      const fromDateAdjusted = new Date(fromDate); // Convert string to Date object
+      fromDateAdjusted.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
 
-    // Adjust date to handle time zone difference
-  const fromDateAdjusted = new Date(fromDate); // Convert string to Date object
-  fromDateAdjusted.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
+      const toDateAdjusted = new Date(toDate);
+      toDateAdjusted.setUTCHours(23, 59, 59, 999); // Set to the end of the day UTC
 
-  const toDateAdjusted = new Date(toDate);
-  toDateAdjusted.setUTCHours(23, 59, 59, 999); // Set to the end of the day UTC
+      // Fetch data using the adjusted dates
+      const result = await pool.query(query, [fromDateAdjusted, toDateAdjusted]);
 
-  // Fetch data using the adjusted dates
-  const result = await pool.query(query, [fromDateAdjusted, toDateAdjusted]);
-
-
-    console.log("Fetched data:", result.rows); // Log the fetched data to verify
     return result.rows;
   } catch (error) {
     console.error(`Error fetching data from table ${stationName}:`, error.message);
@@ -263,7 +256,6 @@ const getData = async (stationName, date) => {
   }
 };
 
-
 const sumCountsByShift = (data) => {
   // Initialize the counts for each shift with default 0 values
   const shiftCounts = {
@@ -282,7 +274,11 @@ const sumCountsByShift = (data) => {
     });
   }
 
-  return shiftCounts;
+  // Convert the object to an array
+  return Object.keys(shiftCounts).map(shift => ({
+    shift,
+    ...shiftCounts[shift],
+  }));
 };
 
 router.post('/:stationName/shiftWise', async (req, res) => {
@@ -317,6 +313,132 @@ router.post('/:stationName/shiftWise', async (req, res) => {
   } catch (error) {
     console.error(`Error in endpoint /${stationName}/singleDay:`, error.message);
     res.status(500).json({ message: "Failed to fetch data", error: error.message });
+  }
+});
+
+//monthwise - stamping stations
+const getMonthlyDataForRange = async (stationName, fromMonth, fromYear, toMonth, toYear) => {
+  const query = `
+    SELECT EXTRACT(MONTH FROM date) AS month, EXTRACT(YEAR FROM date) AS year, 
+           SUM(rotor_count) AS rotor_count, SUM(stator_count) AS stator_count
+    FROM ${stationName}
+    WHERE (EXTRACT(YEAR FROM date) > $1 OR (EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) >= $2))
+      AND (EXTRACT(YEAR FROM date) < $3 OR (EXTRACT(YEAR FROM date) = $3 AND EXTRACT(MONTH FROM date) <= $4))
+    GROUP BY year, month
+    ORDER BY year, month;
+  `;
+
+  try {
+    // Fetch data for the given range of months and years
+    const result = await pool.query(query, [fromYear, fromMonth, toYear, toMonth]);
+    console.log(result.rows); // Log the fetched data
+    return result.rows; // Returns an array of objects with year, month, rotor_count, stator_count
+  } catch (error) {
+    console.error(`Error fetching monthly data for ${stationName}:`, error.message);
+    throw error;
+  }
+};
+const monthNames = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+const getMonthName = (monthIndex) => {
+  return monthNames[monthIndex - 1]; // Convert 1-based month to 0-based index
+};
+
+const aggregateMonthlyDataForRange = (data, fromMonth, fromYear, toMonth, toYear) => {
+  const monthlyData = [];
+  let currentYear = fromYear;
+  let currentMonth = fromMonth;
+
+  while (
+    currentYear < toYear ||
+    (currentYear === toYear && currentMonth <= toMonth)
+  ) {
+    monthlyData.push({
+      year: currentYear,
+      month: currentMonth,
+      rotor_count: 0,
+      stator_count: 0
+    });
+
+    currentMonth++;
+    if (currentMonth > 12) {
+      currentMonth = 1;
+      currentYear++;
+    }
+  }
+
+  data.forEach(row => {
+    const monthIndex = (row.year - fromYear) * 12 + (row.month - fromMonth);
+    if (monthIndex >= 0 && monthIndex < monthlyData.length) {
+      monthlyData[monthIndex].rotor_count += parseInt(row.rotor_count) || 0;
+      monthlyData[monthIndex].stator_count += parseInt(row.stator_count) || 0;
+    }
+  });
+
+  // Format the response with separate month and year
+  return monthlyData.map(monthData => ({
+    month: getMonthName(monthData.month), // Month name (e.g., "Jan", "Feb")
+    year: monthData.year, // Year (e.g., 2024)
+    rotor_count: monthData.rotor_count,
+    stator_count: monthData.stator_count,
+  }));
+};
+
+router.post('/:stationName/monthWise', async (req, res) => {
+  const { stationName } = req.params;
+  const { fromMonth, fromYear, toMonth, toYear } = req.body;
+
+  if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
+    return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
+  }
+
+  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station name" });
+  }
+
+  // Check if the months and years are valid
+  if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
+    return res.status(400).json({ message: "Invalid month. Please provide a month between 1 and 12." });
+  }
+
+  if (fromYear > toYear || (fromYear === toYear && fromMonth > toMonth)) {
+    return res.status(400).json({ message: "From date must be earlier than to date" });
+  }
+
+  try {
+    // Step 1: Fetch data for the given range of months and years
+    const data = await getMonthlyDataForRange(stationName, fromMonth, fromYear, toMonth, toYear);
+
+    // Step 2: Aggregate the data for the range
+    const aggregatedData = aggregateMonthlyDataForRange(data, fromMonth, fromYear, toMonth, toYear);
+
+    // Step 3: Format the response
+    const formattedResponse = aggregatedData.map(monthData => ({
+      month: `${monthData.month} ${monthData.year}`,
+      rotor_count: monthData.rotor_count,
+      stator_count: monthData.stator_count,
+    }));
+
+    const monthLabels = []
+
+    formattedResponse.map((fr)=>{
+      monthLabels.push(fr.month)
+    })
+
+    // Step 4: Send the response with the aggregated data
+    res.json({
+      station: stationName,
+      monthLabels,
+      monthSums: formattedResponse
+      
+    });
+  } catch (error) {
+    console.error(`Error in endpoint /${stationName}/monthWise:`, error.message);
+    res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
   }
 });
 
