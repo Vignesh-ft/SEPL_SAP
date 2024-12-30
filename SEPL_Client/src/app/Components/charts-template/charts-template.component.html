@@ -41,38 +41,38 @@
     <div *ngIf="!fourGrid" class="w-full h-full grid grid-cols-1 gap-3">
 
       @if (isHourlyReport) {
-        <app-chart [label]="hourLabel" [showValue]=24 [type]="'bar'" [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
+        <app-chart [label]="hourLabel" [showValue]=24 [type]="'bar'" [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]=refreshInterval [lineColors]="'hour'"></app-chart>
       }
 
       @if (isShiftWiseReport) {
-        <app-chart [label]="shiftLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
+        <app-chart [label]="shiftLabel" [type]="'bar'" [showValue]=3 [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'shift'"></app-chart>
       }
 
       @if (isDayWiseReport) {
-        <app-chart [label]="dayLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="dayData" title="DAY WISE REPORT" [refreshInterval]="10000" [lineColors]="'day'"></app-chart>
+        <app-chart [label]="dayLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="dayData" title="DAY WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'day'"></app-chart>
       }
 
       @if (isMonthWiseReport) {
-        <app-chart [label]="monthLabel" [legend]=false [value]="monthData" title="MONTH WISE REPORT" [refreshInterval]="10000" [lineColors]="'month'"></app-chart>
+        <app-chart [label]="monthLabel" [type]="'bar'" [showValue]=6 [legend]=false [value]="monthData" title="MONTH WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'month'"></app-chart>
       }
     </div>
 
     <div *ngIf="fourGrid" class="w-full h-full grid grid-cols-2 grid-rows-2 gap-3">
 
       @if (isHourlyReport) {
-        <app-chart [label]="hourLabel" [type]="'bar'" [showValue]=24 [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
+        <app-chart [label]="hourLabel" [type]="'bar'" [showValue]=24 [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]=refreshInterval [lineColors]="'hour'"></app-chart>
       }
 
       @if (isShiftWiseReport) {
-        <app-chart [label]="shiftLabel" [type]="'line'" [showValue]=10  [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
+        <app-chart [label]="shiftLabel" [type]="'bar'" [showValue]=3  [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'shift'"></app-chart>
       }
 
       @if (isDayWiseReport) {
-        <app-chart [label]="dayLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="dayData" title="DAY WISE REPORT" [refreshInterval]="10000" [lineColors]="'day'"></app-chart>
+        <app-chart [label]="dayLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="dayData" title="DAY WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'day'"></app-chart>
       }
 
       @if (isMonthWiseReport) {
-        <app-chart [label]="monthLabel" [legend]=false [value]="monthData" title="MONTH WISE REPORT" [refreshInterval]="10000" [lineColors]="'month'"></app-chart>
+        <app-chart [label]="monthLabel" [type]="'bar'" [showValue]=6 [legend]=false [value]="monthData" title="MONTH WISE REPORT" [refreshInterval]=refreshInterval [lineColors]="'month'"></app-chart>
       }
     </div>
   </div>

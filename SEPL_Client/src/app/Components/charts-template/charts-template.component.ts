@@ -17,6 +17,7 @@ export class ChartsTemplateComponent implements OnInit {
 
   @Input() templateTitle:string = ""
   @Input() endPoint:any
+  @Input() refreshInterval:any
   // @Input() dayWiseData:any
   // @Input() shiftWiseData:any
   // @Input() monthWiseData:any
@@ -58,6 +59,11 @@ export class ChartsTemplateComponent implements OnInit {
   dayReportData:any
   shiftReportData:any
   monthReportData:any
+
+  hourlyBody:any = {date: "2024-07-26"}
+  dayBody:any = {fromDate: '2024-07-22', toDate: '2024-08-02'}
+  shiftBody:any = {date: "2024-07-22"}
+  monthBody:any = {fromMonth: 7, fromYear: 2024, toMonth: 9, toYear: 2024 }
 
   chartRoute:any = [
     {
@@ -143,6 +149,26 @@ export class ChartsTemplateComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.sw.fetchChartData(`${this.endPoint}/hourly`, this.hourlyBody).subscribe((response:any)=> {
+      // console.log("Hourly Data",response)
+      this.hourlyReport(response)
+    })
+
+    this.sw.fetchChartData(`${this.endPoint}/dayWise`, this.dayBody).subscribe((response:any)=> {
+      // console.log("Day Data",response)
+      this.dailyReport(response)
+    })
+
+    this.sw.fetchChartData(`${this.endPoint}/shiftWise`, this.shiftBody).subscribe((response:any)=> {
+      // console.log("Shift Data",response)
+      this.shiftReport(response)
+
+    })
+
+    this.sw.fetchChartData(`${this.endPoint}/monthWise`, this.monthBody).subscribe((response:any)=> {
+      // console.log("Month Data",response)
+      this.monthReport(response)
+    })
     this.getData()
   }
 
@@ -189,25 +215,32 @@ export class ChartsTemplateComponent implements OnInit {
     // const shiftBody = [String(shiftEndPointDate), String(currDate)]
     // const monthBody = [String(monthEndPointDate), String(currDate)]
 
-    const hourlyBody = {date: "2024-07-26"}
-    const dayBody = {fromDate: '2024-07-22', toDate: '2024-08-02'}
-    const shiftBody = {date: "2024-07-22"}
 
-    this.intervalSubscription = interval(1000).subscribe(() => {
 
-      this.sw.fetchChartData('stamping_station_a/hourly', hourlyBody).subscribe((response:any)=> {
-        // console.log(response)
+    this.intervalSubscription = interval(this.refreshInterval).subscribe(() => {
+
+      console.log("Updated");
+
+
+      this.sw.fetchChartData(`${this.endPoint}/hourly`, this.hourlyBody).subscribe((response:any)=> {
+        // console.log("Hourly Data",response)
         this.hourlyReport(response)
       })
 
-      this.sw.fetchChartData('stamping_station_a/dayWise', dayBody).subscribe((response:any)=> {
-        // console.log(response)
+      this.sw.fetchChartData(`${this.endPoint}/dayWise`, this.dayBody).subscribe((response:any)=> {
+        // console.log("Day Data",response)
         this.dailyReport(response)
       })
 
-      this.sw.fetchChartData('stamping_station_a/shiftWise', shiftBody).subscribe((response:any)=> {
-        // console.log(response)
+      this.sw.fetchChartData(`${this.endPoint}/shiftWise`, this.shiftBody).subscribe((response:any)=> {
+        // console.log("Shift Data",response)
         this.shiftReport(response)
+
+      })
+
+      this.sw.fetchChartData(`${this.endPoint}/monthWise`, this.monthBody).subscribe((response:any)=> {
+        // console.log("Month Data",response)
+        this.monthReport(response)
 
       })
 
@@ -271,7 +304,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.dayData = [this.dayData1, this.dayData2]
-    console.log(this.dayData);
+    // console.log(this.dayData);
   }
 
   // shiftReport(data:any) {
@@ -291,6 +324,8 @@ export class ChartsTemplateComponent implements OnInit {
 
   shiftReport(res:any) {
     this.shiftLabel = res.shiftLabels
+    // console.log(res);
+
     this.shiftData1 = []
     this.shiftData2 = []
 
@@ -300,7 +335,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
-    console.log(this.shiftData);
+    // console.log(this.shiftData);
   }
 
   // monthReport(data:any) {
@@ -317,6 +352,22 @@ export class ChartsTemplateComponent implements OnInit {
   //   this.monthData = [this.monthData1, this.monthData2]
   //   // console.log("Updated month", this.monthData );
   // }
+
+  monthReport(res:any) {
+    this.monthLabel = res.monthLabels
+    // console.log(res);
+
+    this.monthData1 = []
+    this.monthData2 = []
+
+    res.monthSums.map((data:any)=> {
+      this.monthData1.push(data.rotor_sum);
+      this.monthData2.push(data.stator_sum);
+    })
+
+    this.monthData = [this.monthData1, this.monthData2]
+    // console.log(this.monthData);
+  }
 
 
 
