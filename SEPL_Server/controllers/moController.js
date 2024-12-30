@@ -285,7 +285,7 @@ const sumCountsByShift = (data) => {
   return shiftCounts;
 };
 
-router.post('/:stationName/singleDay', async (req, res) => {
+router.post('/:stationName/shiftWise', async (req, res) => {
   const { stationName } = req.params;
   const { date } = req.body;
 
@@ -302,14 +302,17 @@ router.post('/:stationName/singleDay', async (req, res) => {
     // Step 1: Fetch the data for the given date
     const data = await getData(stationName, date);
 
+    const shiftLabels = [`${date}Shift A`, `${date}Shift B`, `${date}Shift C`]
+
     // Step 2: Group the data by shift and sum the counts
-    const shiftCounts = sumCountsByShift(data);
+    const shiftSums = sumCountsByShift(data);
 
     // Step 3: Send the response with the summed counts for each shift
     res.json({
       station: stationName,
       date,
-      shiftCounts,  // Returns rotor and stator counts for each shift (A, B, C)
+      shiftLabels,
+      shiftSums,  // Returns rotor and stator counts for each shift (A, B, C)
     });
   } catch (error) {
     console.error(`Error in endpoint /${stationName}/singleDay:`, error.message);

@@ -191,6 +191,7 @@ export class ChartsTemplateComponent implements OnInit {
 
     const hourlyBody = {date: "2024-07-26"}
     const dayBody = {fromDate: '2024-07-22', toDate: '2024-08-02'}
+    const shiftBody = {date: "2024-07-22"}
 
     this.intervalSubscription = interval(1000).subscribe(() => {
 
@@ -200,8 +201,14 @@ export class ChartsTemplateComponent implements OnInit {
       })
 
       this.sw.fetchChartData('stamping_station_a/dayWise', dayBody).subscribe((response:any)=> {
-        console.log(response)
+        // console.log(response)
         this.dailyReport(response)
+      })
+
+      this.sw.fetchChartData('stamping_station_a/shiftWise', shiftBody).subscribe((response:any)=> {
+        // console.log(response)
+        this.shiftReport(response)
+
       })
 
     })
@@ -223,21 +230,6 @@ export class ChartsTemplateComponent implements OnInit {
   //   // console.log("Updated Hour", this.hourData);
   // }
 
-  // dailyReport(data:any) {
-  //   this.dayReportData = this.filterService.dayFilter(data)
-  //   // console.log(this.hourReportData)
-  //   this.dayLabel = this.dayReportData.dailyLabels
-  //   this.dayData1 = []
-  //   this.dayData2 = []
-  //   this.dayReportData.dailySums.map((data:any) => {
-  //     this.dayData1.push(data.rotor_sum)
-  //     this.dayData2.push(data.stator_sum)
-  //   })
-
-  //   this.dayData = [this.dayData1, this.dayData2]
-  //   // console.log("Updated Day", this.dayData );
-  // }
-
   hourlyReport(res:any){
     this.hourLabel = res.hourlyLabels
     this.hourData1 = []
@@ -253,6 +245,21 @@ export class ChartsTemplateComponent implements OnInit {
 
   }
 
+  // dailyReport(data:any) {
+  //   this.dayReportData = this.filterService.dayFilter(data)
+  //   // console.log(this.hourReportData)
+  //   this.dayLabel = this.dayReportData.dailyLabels
+  //   this.dayData1 = []
+  //   this.dayData2 = []
+  //   this.dayReportData.dailySums.map((data:any) => {
+  //     this.dayData1.push(data.rotor_sum)
+  //     this.dayData2.push(data.stator_sum)
+  //   })
+
+  //   this.dayData = [this.dayData1, this.dayData2]
+  //   // console.log("Updated Day", this.dayData );
+  // }
+
   dailyReport(res:any) {
     this.dayLabel = res.dailyLabels
     this.dayData1 = []
@@ -267,36 +274,56 @@ export class ChartsTemplateComponent implements OnInit {
     console.log(this.dayData);
   }
 
+  // shiftReport(data:any) {
+  //   this.shiftReportData = this.filterService.shiftFilter(data)
+  //   // console.log(this.hourReportData)
+  //   this.shiftLabel = this.shiftReportData.shiftLabels
+  //   this.shiftData1 = []
+  //   this.shiftData2 = []
+  //   this.shiftReportData.shiftSums.map((data:any) => {
+  //     this.shiftData1.push(data.rotor_sum)
+  //     this.shiftData2.push(data.stator_sum)
+  //   })
 
-  shiftReport(data:any) {
-    this.shiftReportData = this.filterService.shiftFilter(data)
-    // console.log(this.hourReportData)
-    this.shiftLabel = this.shiftReportData.shiftLabels
+  //   this.shiftData = [this.shiftData1, this.shiftData2]
+  //   // console.log("Updated shift", this.shiftData );
+  // }
+
+  shiftReport(res:any) {
+    this.shiftLabel = res.shiftLabels
     this.shiftData1 = []
     this.shiftData2 = []
-    this.shiftReportData.shiftSums.map((data:any) => {
-      this.shiftData1.push(data.rotor_sum)
-      this.shiftData2.push(data.stator_sum)
+
+    res.shiftSums.map((data:any)=> {
+      this.shiftData1.push(data.rotor_sum);
+      this.shiftData2.push(data.stator_sum);
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
-    // console.log("Updated shift", this.shiftData );
+    console.log(this.shiftData);
   }
 
-  monthReport(data:any) {
-    this.monthReportData = this.filterService.monthFilter(data)
-    // console.log(this.hourReportData)
-    this.monthLabel = this.monthReportData.monthlyLabels
-    this.monthData1 = []
-    this.monthData2 = []
-    this.monthReportData.monthlySums.map((data:any) => {
-      this.monthData1.push(data.rotor_sum)
-      this.monthData2.push(data.stator_sum)
-    })
+  // monthReport(data:any) {
+  //   this.monthReportData = this.filterService.monthFilter(data)
+  //   // console.log(this.hourReportData)
+  //   this.monthLabel = this.monthReportData.monthlyLabels
+  //   this.monthData1 = []
+  //   this.monthData2 = []
+  //   this.monthReportData.monthlySums.map((data:any) => {
+  //     this.monthData1.push(data.rotor_sum)
+  //     this.monthData2.push(data.stator_sum)
+  //   })
 
-    this.monthData = [this.monthData1, this.monthData2]
-    // console.log("Updated month", this.monthData );
-  }
+  //   this.monthData = [this.monthData1, this.monthData2]
+  //   // console.log("Updated month", this.monthData );
+  // }
+
+
+
+
+
+
+
 
 
   ngOnDestroy(): void {

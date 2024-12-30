@@ -45,7 +45,7 @@
       }
 
       @if (isShiftWiseReport) {
-        <app-chart [label]="shiftLabel" [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
+        <app-chart [label]="shiftLabel" [type]="'bar'" [showValue]=10 [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
       }
 
       @if (isDayWiseReport) {
@@ -64,7 +64,7 @@
       }
 
       @if (isShiftWiseReport) {
-        <app-chart [label]="shiftLabel"  [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
+        <app-chart [label]="shiftLabel" [type]="'line'" [showValue]=10  [legend]=false [value]="shiftData" title="SHIFT WISE REPORT" [refreshInterval]="10000" [lineColors]="'shift'"></app-chart>
       }
 
       @if (isDayWiseReport) {
