@@ -274,10 +274,11 @@ const sumCountsByShift = (data) => {
     });
   }
 
-  // Convert the object to an array
+  // Convert the object to an array and rename keys
   return Object.keys(shiftCounts).map(shift => ({
     shift,
-    ...shiftCounts[shift],
+    rotor_sum: shiftCounts[shift].rotor_count,
+    stator_sum: shiftCounts[shift].stator_count,
   }));
 };
 
@@ -416,8 +417,8 @@ router.post('/:stationName/monthWise', async (req, res) => {
     // Step 3: Format the response
     const formattedResponse = aggregatedData.map(monthData => ({
       month: `${monthData.month} ${monthData.year}`,
-      rotor_count: monthData.rotor_count,
-      stator_count: monthData.stator_count,
+      rotor_sum: monthData.rotor_count,
+      stator_sum: monthData.stator_count,
     }));
 
     const monthLabels = []
@@ -438,7 +439,6 @@ router.post('/:stationName/monthWise', async (req, res) => {
     res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
   }
 });
-
 
 
 // Main function to log in, fetch data, and compareq
