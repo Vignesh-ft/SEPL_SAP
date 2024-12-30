@@ -16,6 +16,7 @@ const pool = new Pool({
  
 });
 
+//hourly - stamping stations
 function hourFilterWithMissingHours(data) {
   const hourlySums = Array.from({ length: 24 }, (_, hour) => ({
     hour: hour.toString().padStart(2, '0'),
@@ -93,6 +94,8 @@ router.post('/:stationName/hourly', async (req, res) => {
   }
 });
 
+
+//daywise - stamping stations
 function dateFilterWithMissingDates(data, fromDate, toDate) {
   // Initialize an object to store the sum of rotor_count and stator_count for each day
   const dailySums = {};
@@ -243,6 +246,76 @@ router.post('/:stationName/dayWise', async (req, res) => {
   }
 });
 
+//shiftwise - stamping stations
+const getData = async (stationName, date) => {
+  const query = `
+    SELECT shift, rotor_count, stator_count
+    FROM ${stationName}
+    WHERE date::date = $1;
+  `;
+  
+  try {
+    const result = await pool.query(query, [date]);
+    return result.rows;
+  } catch (error) {
+    console.error(`Error fetching data for ${stationName} on ${date}:`, error.message);
+    throw error;
+  }
+};
+
+
+const sumCountsByShift = (data) => {
+  // Initialize the counts for each shift with default 0 values
+  const shiftCounts = {
+    A: { rotor_count: 0, stator_count: 0 },
+    B: { rotor_count: 0, stator_count: 0 },
+    C: { rotor_count: 0, stator_count: 0 },
+  };
+
+  // If there is data, sum the counts for each shift
+  if (data.length > 0) {
+    data.forEach(row => {
+      if (shiftCounts[row.shift]) {
+        shiftCounts[row.shift].rotor_count += row.rotor_count;
+        shiftCounts[row.shift].stator_count += row.stator_count;
+      }
+    });
+  }
+
+  return shiftCounts;
+};
+
+router.post('/:stationName/singleDay', async (req, res) => {
+  const { stationName } = req.params;
+  const { date } = req.body;
+
+  if (!stationName || !date) {
+    return res.status(400).json({ message: "Station name and date are required" });
+  }
+
+  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station name" });
+  }
+
+  try {
+    // Step 1: Fetch the data for the given date
+    const data = await getData(stationName, date);
+
+    // Step 2: Group the data by shift and sum the counts
+    const shiftCounts = sumCountsByShift(data);
+
+    // Step 3: Send the response with the summed counts for each shift
+    res.json({
+      station: stationName,
+      date,
+      shiftCounts,  // Returns rotor and stator counts for each shift (A, B, C)
+    });
+  } catch (error) {
+    console.error(`Error in endpoint /${stationName}/singleDay:`, error.message);
+    res.status(500).json({ message: "Failed to fetch data", error: error.message });
+  }
+});
 
 
 
