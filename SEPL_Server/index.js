@@ -15,9 +15,7 @@ app.use('/api', router);
 // Start the process when the server starts
 const start = async () => {
   try {
-    console.log("Starting login and data fetch process...");
-    await processData();  // Optionally start the process here if needed
-    console.log("Process completed successfully.");
+  
   } catch (error) {
     console.error("Error in start:", error.message);
   }
