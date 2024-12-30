@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { router } = require('./controllers/moController'); // Import processData and router from the controller
+const continuityTestRoutes = require('./controllers/continuity');
 
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(cors());
 
 // Register the router with your Express app
 app.use('/api', router);
+app.use('/continuity', continuityTestRoutes);
 
 // Start the process when the server starts
 const start = async () => {
