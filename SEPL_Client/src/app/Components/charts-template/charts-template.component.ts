@@ -160,7 +160,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.sw.fetchChartData(`${this.endPoint}/shiftWise`, this.shiftBody).subscribe((response:any)=> {
-      // console.log("Shift Data",response)
+      console.log("Shift Data",response)
       this.shiftReport(response)
 
     })

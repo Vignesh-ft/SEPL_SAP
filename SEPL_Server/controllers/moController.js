@@ -296,9 +296,9 @@ router.post('/:stationName/shiftWise', async (req, res) => {
   try {
     // Step 1: Fetch the data for the given date
     const data = await getData(stationName, date);
- 
-    const shiftLabels = [`${date} Shift A`, `${date} Shift B`, `${date} Shift C`]
- 
+
+    const shiftLabels = [`${date}Shift A`, `${date}Shift B`, `${date}Shift C`]
+
     // Step 2: Group the data by shift and sum the counts
     const shiftSums = sumCountsByShift(data);
     // Step 3: Send the response with the summed counts for each shift
