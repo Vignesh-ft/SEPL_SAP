@@ -172,7 +172,7 @@ const fetchTableForDay = async (stationName, fromDate, toDate) => {
   `;
   
   try {
-              // Adjust date to handle time zone difference
+      // Adjust date to handle time zone difference
       const fromDateAdjusted = new Date(fromDate); // Convert string to Date object
       fromDateAdjusted.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
 
@@ -258,17 +258,17 @@ const getData = async (stationName, date) => {
 const sumCountsByShift = (data) => {
   // Initialize the counts for each shift with default 0 values
   const shiftCounts = {
-    A: { rotor_count: 0, stator_count: 0 },
-    B: { rotor_count: 0, stator_count: 0 },
-    C: { rotor_count: 0, stator_count: 0 },
+    A: { rotor_sum: 0, stator_sum: 0 },
+    B: { rotor_sum: 0, stator_sum: 0 },
+    C: { rotor_sum: 0, stator_sum: 0 },
   };
 
   // If there is data, sum the counts for each shift
   if (data.length > 0) {
     data.forEach(row => {
       if (shiftCounts[row.shift]) {
-        shiftCounts[row.shift].rotor_count += row.rotor_count;
-        shiftCounts[row.shift].stator_count += row.stator_count;
+        shiftCounts[row.shift].rotor_sum += row.rotor_count;
+        shiftCounts[row.shift].stator_sum += row.stator_count;
       }
     });
   }
@@ -298,13 +298,15 @@ router.post('/:stationName/shiftWise', async (req, res) => {
     // Step 1: Fetch the data for the given date
     const data = await getData(stationName, date);
 
+    const shiftLabels = [`${date}Shift A`, `${date}Shift B`, `${date}Shift C`]
+
     // Step 2: Group the data by shift and sum the counts
     const shiftSums = sumCountsByShift(data);
-
     // Step 3: Send the response with the summed counts for each shift
     res.json({
       station: stationName,
       date,
+      shiftLabels,
       shiftSums,  // Returns rotor and stator counts for each shift (A, B, C)
     });
   } catch (error) {
@@ -379,8 +381,8 @@ const aggregateMonthlyDataForRange = (data, fromMonth, fromYear, toMonth, toYear
   return monthlyData.map(monthData => ({
     month: getMonthName(monthData.month), // Month name (e.g., "Jan", "Feb")
     year: monthData.year, // Year (e.g., 2024)
-    rotor_count: monthData.rotor_count,
-    stator_count: monthData.stator_count,
+    rotor_sum: monthData.rotor_count,
+    stator_sum: monthData.stator_count,
   }));
 };
 
@@ -420,11 +422,8 @@ router.post('/:stationName/monthWise', async (req, res) => {
       stator_sum: monthData.stator_sum,
     }));
 
-    const monthLabels = []
-
-    formattedResponse.map((fr)=>{
-      monthLabels.push(fr.month)
-    })
+    // const temp = [...temp, formattedResponse]
+    const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`)
 
     // Step 4: Send the response with the aggregated data
     res.json({

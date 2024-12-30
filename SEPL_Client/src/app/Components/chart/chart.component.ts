@@ -64,7 +64,7 @@ export class ChartComponent implements OnInit {
         this.data.datasets[0].data = this.value[0]
         this.data.datasets[1].data = this.value[1]
 
-        console.log("Chart js", this.value);
+        // console.log("Chart js", this.value);
 
       });
   }
