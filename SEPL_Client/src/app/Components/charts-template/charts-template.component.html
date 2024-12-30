@@ -41,7 +41,7 @@
     <div *ngIf="!fourGrid" class="w-full h-full grid grid-cols-1 gap-3">
 
       @if (isHourlyReport) {
-        <app-chart [label]="hourLabel" [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
+        <app-chart [label]="hourLabel" [showValue]=24 [type]="'bar'" [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
       }
 
       @if (isShiftWiseReport) {
@@ -60,7 +60,7 @@
     <div *ngIf="fourGrid" class="w-full h-full grid grid-cols-2 grid-rows-2 gap-3">
 
       @if (isHourlyReport) {
-        <app-chart [label]="hourLabel" [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
+        <app-chart [label]="hourLabel" [type]="'bar'" [showValue]=24 [legend]=false [value]="hourData" title="HOURLY REPORT" [refreshInterval]="10000" [lineColors]="'hour'"></app-chart>
       }
 
       @if (isShiftWiseReport) {

@@ -147,34 +147,90 @@ export class ChartsTemplateComponent implements OnInit {
   }
 
 
+  // getData() {
+  //   // Need to add header
+  //   this.intervalSubscription = interval(1000).subscribe(() => {
+  //     this.sw.fetchChartData(this.endPoint).subscribe((data:any)=> {
+  //       // console.log(data);
+
+  //       this.hourlyReport(data)
+  //       this.dailyReport(data)
+  //       this.shiftReport(data)
+  //       this.monthReport(data)
+  //     })
+  //   })
+
+  // }
+
   getData() {
     // Need to add header
+
+    const date = new Date();
+    const currDate = date.toISOString().split('T')[0]; // Extract the date portion
+
+    // Calculate the date 10 days earlier
+    const tenDaysAgo = new Date(date);
+    tenDaysAgo.setDate(date.getDate() - 10);
+    const dayEndPointDate = tenDaysAgo.toISOString().split('T')[0];
+
+    // Calculate the date 5 months earlier
+    const sixMonthsAgo = new Date(date);
+    sixMonthsAgo.setMonth(date.getMonth() - 6);
+    const monthEndPointDate = sixMonthsAgo.toISOString().split('T')[0];
+
+    // Calculate the date 5 days earlier
+    const fiveDaysAgo = new Date(date);
+    fiveDaysAgo.setDate(date.getDate() - 5);
+    const shiftEndPointDate = fiveDaysAgo.toISOString().split('T')[0];
+
+
+    // const hourlyBody = {date:String(currDate)}
+    // const dayBody = {fromDate: String(dayEndPointDate), toDate: String(currDate)}
+    // const shiftBody = [String(shiftEndPointDate), String(currDate)]
+    // const monthBody = [String(monthEndPointDate), String(currDate)]
+
+    const hourlyBody = {date: "2024-07-26"}
+
+
     this.intervalSubscription = interval(1000).subscribe(() => {
-      this.sw.fetchChartData(this.endPoint).subscribe((data:any)=> {
-        // console.log(data);
-        
-        this.hourlyReport(data)
-        this.dailyReport(data)
-        this.shiftReport(data)
-        this.monthReport(data)
+
+      this.sw.fetchChartData('stamping_station_a/groupby', hourlyBody).subscribe((response:any)=> {
+        // console.log(response)
+        this.hourlyReport(response)
       })
+
     })
 
   }
 
-  hourlyReport(data:any) {
-    this.hourReportData = this.filterService.hourFilter(data)
-    // console.log(this.hourReportData)
-    this.hourLabel = this.hourReportData.hourlyLabels
+  // hourlyReport(data:any) {
+  //   this.hourReportData = this.filterService.hourFilter(data)
+  //   // console.log(this.hourReportData)
+  //   this.hourLabel = this.hourReportData.hourlyLabels
+  //   this.hourData1 = []
+  //   this.hourData2 = []
+  //   this.hourReportData.hourlySums.map((data:any) => {
+  //     this.hourData1.push(data.rotor_sum)
+  //     this.hourData2.push(data.stator_sum)
+  //   })
+
+  //   this.hourData = [this.hourData1, this.hourData2]
+  //   // console.log("Updated Hour", this.hourData);
+  // }
+
+  hourlyReport(res:any){
+    this.hourLabel = res.hourlyLabels
     this.hourData1 = []
     this.hourData2 = []
-    this.hourReportData.hourlySums.map((data:any) => {
-      this.hourData1.push(data.rotor_sum)
-      this.hourData2.push(data.stator_sum)
+
+    res.hourlySums.map((data:any)=> {
+      this.hourData1.push(data.rotor_sum);
+      this.hourData2.push(data.stator_sum);
     })
 
     this.hourData = [this.hourData1, this.hourData2]
-    // console.log("Updated Hour", this.hourData);
+    console.log(this.hourData1, this.hourData2);
+
   }
 
   dailyReport(data:any) {
