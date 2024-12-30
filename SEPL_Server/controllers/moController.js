@@ -276,8 +276,8 @@ const sumCountsByShift = (data) => {
   // Convert the object to an array and rename keys
   return Object.keys(shiftCounts).map(shift => ({
     shift,
-    rotor_sum: shiftCounts[shift].rotor_count,
-    stator_sum: shiftCounts[shift].stator_count,
+    rotor_sum: shiftCounts[shift].rotor_sum,
+    stator_sum: shiftCounts[shift].stator_sum,
   }));
 };
 
@@ -298,7 +298,7 @@ router.post('/:stationName/shiftWise', async (req, res) => {
     // Step 1: Fetch the data for the given date
     const data = await getData(stationName, date);
 
-    const shiftLabels = [`${date}Shift A`, `${date}Shift B`, `${date}Shift C`]
+    const shiftLabels = [`${date} Shift A`, `${date} Shift B`, `${date} Shift C`]
 
     // Step 2: Group the data by shift and sum the counts
     const shiftSums = sumCountsByShift(data);
