@@ -190,13 +190,18 @@ export class ChartsTemplateComponent implements OnInit {
     // const monthBody = [String(monthEndPointDate), String(currDate)]
 
     const hourlyBody = {date: "2024-07-26"}
-
+    const dayBody = {fromDate: '2024-07-22', toDate: '2024-08-02'}
 
     this.intervalSubscription = interval(1000).subscribe(() => {
 
-      this.sw.fetchChartData('stamping_station_a/groupby', hourlyBody).subscribe((response:any)=> {
+      this.sw.fetchChartData('stamping_station_a/hourly', hourlyBody).subscribe((response:any)=> {
         // console.log(response)
         this.hourlyReport(response)
+      })
+
+      this.sw.fetchChartData('stamping_station_a/dayWise', dayBody).subscribe((response:any)=> {
+        console.log(response)
+        this.dailyReport(response)
       })
 
     })
@@ -218,6 +223,21 @@ export class ChartsTemplateComponent implements OnInit {
   //   // console.log("Updated Hour", this.hourData);
   // }
 
+  // dailyReport(data:any) {
+  //   this.dayReportData = this.filterService.dayFilter(data)
+  //   // console.log(this.hourReportData)
+  //   this.dayLabel = this.dayReportData.dailyLabels
+  //   this.dayData1 = []
+  //   this.dayData2 = []
+  //   this.dayReportData.dailySums.map((data:any) => {
+  //     this.dayData1.push(data.rotor_sum)
+  //     this.dayData2.push(data.stator_sum)
+  //   })
+
+  //   this.dayData = [this.dayData1, this.dayData2]
+  //   // console.log("Updated Day", this.dayData );
+  // }
+
   hourlyReport(res:any){
     this.hourLabel = res.hourlyLabels
     this.hourData1 = []
@@ -229,24 +249,24 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.hourData = [this.hourData1, this.hourData2]
-    console.log(this.hourData1, this.hourData2);
+    // console.log(this.hourData);
 
   }
 
-  dailyReport(data:any) {
-    this.dayReportData = this.filterService.dayFilter(data)
-    // console.log(this.hourReportData)
-    this.dayLabel = this.dayReportData.dailyLabels
+  dailyReport(res:any) {
+    this.dayLabel = res.dailyLabels
     this.dayData1 = []
     this.dayData2 = []
-    this.dayReportData.dailySums.map((data:any) => {
-      this.dayData1.push(data.rotor_sum)
-      this.dayData2.push(data.stator_sum)
+
+    res.dailyAggregates.map((data:any)=> {
+      this.dayData1.push(data.rotor_sum);
+      this.dayData2.push(data.stator_sum);
     })
 
     this.dayData = [this.dayData1, this.dayData2]
-    // console.log("Updated Day", this.dayData );
+    console.log(this.dayData);
   }
+
 
   shiftReport(data:any) {
     this.shiftReportData = this.filterService.shiftFilter(data)
