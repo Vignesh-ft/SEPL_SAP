@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(cors());
 
 // Register the router with your Express app
-app.use('/api', router);
+app.use('/stamping_station', router);
 app.use('/continuity', continuityTestRoutes);
 app.use('/slot_paper', slot_paper);
 app.use('/sp_test', sp_test);
