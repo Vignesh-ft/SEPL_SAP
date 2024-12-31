@@ -2,7 +2,7 @@
 
   <!-- Header -->
   <div *ngIf="true" class="flex slideIn items-center justify-between px-4 w-full">
-    <p class="text-[22px] h-full flex items-center justify-start font-bold slideIn hover:text-[#DA2020] duration-`00">{{templateTitle}}</p>
+    <p class="text-[22px] h-full flex items-center justify-start font-bold slideIn hover:text-[#283b90] duration-`00">{{templateTitle}}</p>
 
     <div class="flex items-center justify-between w-[50%] h-full gap-2">
 
@@ -15,14 +15,14 @@
             'translate-x-[200%]': chartRoute[2].isOpen,
             'translate-x-[300%]': chartRoute[3].isOpen,
           }"
-          class="absolute w-[25%] h-full bg-[#DA2020] z-10 rounded-sm duration-300"></div>
+          class="absolute w-[25%] h-full bg-[#283b90] z-10 rounded-sm duration-300"></div>
 
         @for (route of chartRoute; track route) {
-          <p (click)="changeChart(route.order);" [ngClass]="{'text-white duration-300': route.isOpen}" class="w-full cursor-pointer hover:border-b-2 border-[#DA2020] duration-100 flex items-center z-20 justify-center py-[14px] font-semibold">{{route.name}} REPORT</p>
+          <p (click)="changeChart(route.order);" [ngClass]="{'text-white duration-300': route.isOpen}" class="w-full cursor-pointer hover:border-b-2 border-[#283b90] duration-100 flex items-center z-20 justify-center py-[14px] font-semibold">{{route.name}} REPORT</p>
         }
       </div>
 
-      <span (click)="changeChart(5)" [ngClass]="{'bg-[#DA2020] hover:bg-[#DA2020]': !chartRoute[0].isOpen && !chartRoute[1].isOpen && !chartRoute[2].isOpen && !chartRoute[3].isOpen}" class="size-[45px] flex items-center cursor-pointer hover:border-b-2 border-[#DA2020] duration-100  duration-200 hover:scale-105 duration-200 z-30 justify-center rounded-md">
+      <span (click)="changeChart(5)" [ngClass]="{'bg-[#283b90] hover:bg-[#283b90]': !chartRoute[0].isOpen && !chartRoute[1].isOpen && !chartRoute[2].isOpen && !chartRoute[3].isOpen}" class="size-[45px] flex items-center cursor-pointer hover:border-b-2 border-[#283b90] duration-100  duration-200 hover:scale-105 duration-200 z-30 justify-center rounded-md">
         <svg [ngClass]="{'stroke-[#000]': chartRoute[0].isOpen || chartRoute[1].isOpen || chartRoute[2].isOpen || chartRoute[3].isOpen, 'stroke-[#FFF]': !chartRoute[0].isOpen && !chartRoute[1].isOpen && !chartRoute[2].isOpen && !chartRoute[3].isOpen}" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 3H3V10H10V3Z" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M21 3H14V10H21V3Z" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>

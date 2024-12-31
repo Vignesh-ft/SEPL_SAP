@@ -1,9 +1,10 @@
-<div class="flex items-center justify-start gap-14 px-20 w-screen h-[70px] bg-[#DA2020]">
+<div class="flex items-center justify-start gap-14 px-20 pl-16 w-screen h-[70px] bg-[#283b90]">
   <!-- Logo -->
-  <img src="../../../assets/Logo/Logo_Vertical.png" alt="Logo" class="h-[80%] max-h-[70px]">
+
+  <img src="../../../assets/Logo/Wattic_Vertical.png" alt="Logo" class="h-[70%] max-h-[70px] rounded-[5px] p-3 px-5 bg-white">
 
   <span class="flex items-center justify-end gap-10 w-full h-full">
-    <span class="flex items-center justify-center w-auto relative">
+    <span *ngIf="false" class="flex items-center justify-center w-auto relative">
       @for (route of routes; track route) {
         <a [routerLink]="[route.path]" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="flex font-bold w-[180px] rounded-md py-5 z-30 text-[13px] items-center justify-center">
           {{route.name}}

@@ -162,7 +162,7 @@ export class ChartsTemplateComponent implements OnInit {
     // console.log("Loader State: ", this.counter, this.loader);
 
     this.sw.fetchChartData(this.stationName,`${this.endPoint}/hourly`, this.postData.hour).subscribe((response:any)=> {
-      console.log("Hourly Data",response)
+      // console.log("Hourly Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Hourly Data Recieved`);
