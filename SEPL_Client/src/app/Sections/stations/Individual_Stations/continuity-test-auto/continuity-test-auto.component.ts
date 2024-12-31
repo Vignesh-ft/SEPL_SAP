@@ -14,7 +14,7 @@ export class ContinuityTestAutoComponent {
 
   hourlyBody:any = {date: "2024-08-19"}
   dayBody:any = {fromDate: '2024-08-15', toDate: '2024-08-24'}
-  shiftBody:any = {date: "2024-08-15"}
+  shiftBody:any = {date: "2024-08-19"}
   monthBody:any = {fromMonth: 7, fromYear: 2024, toMonth: 9, toYear: 2024 }
 
   postData = {

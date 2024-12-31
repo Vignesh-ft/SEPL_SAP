@@ -13,7 +13,7 @@ export class StampingStationAComponent {
   endPoint:string = "stamping_station_a"
 
   hourlyBody:any = {date: "2024-07-26"}
-  dayBody:any = {fromDate: '2024-07-22', toDate: '2024-08-02'}
+  dayBody:any = {fromDate: '2024-07-24', toDate: '2024-08-02'}
   shiftBody:any = {date: "2024-07-22"}
   monthBody:any = {fromMonth: 7, fromYear: 2024, toMonth: 9, toYear: 2024 }
 

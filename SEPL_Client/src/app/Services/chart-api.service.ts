@@ -10,6 +10,6 @@ export class ChartAPIService {
   constructor(private http:HttpClient) { }
 
   fetchChartData(stationName:any, fetchFrom:any, body:any):Observable<any> {
-    return this.http.post<any>(`http://localhost:3000/${stationName}/${fetchFrom}`, body)
+    return this.http.post<any>(`http://${environment.host}:${environment.port}/${stationName}/${fetchFrom}`, body)
   }
 }

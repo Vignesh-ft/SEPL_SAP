@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
 import { OverviewComponent } from './Sections/overview/overview.component';
+import { StationsComponent } from '../app/Sections/stations/stations.component';
 
 export const routes: Routes = [
   {
-    title: "Overview",
+    title: "Stations",
     path: '',
-    component: OverviewComponent
+    component: StationsComponent
   },
   {
     title: "Stations",
@@ -13,7 +14,7 @@ export const routes: Routes = [
     loadComponent: ()=> import("../app/Sections/stations/stations.component").then((m)=> m.StationsComponent)
   },
   {
-    title: "Overview",
+    title: "Stations",
     path: '**',
     redirectTo: '/',
     // component: OverviewComponent

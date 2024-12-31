@@ -48,13 +48,36 @@ export class ChartComponent implements OnInit {
     else if (this.lineColors === "month") {
       this.colors = chartColors.monthReport
     }
-
-    this.updateChart()
     // this.distributeValue(this.value)
     this.initializeChart();
+    // console.log("Chart Js", this.value);
+
     this.data.labels = this.label
-    this.data.datasets[0].data = this.value[0]
-    this.data.datasets[1].data = this.value[1]
+    this.data.datasets.push(
+      {
+        label: this.toolTipLabel[0],
+        data: this.value[0],
+        fill: false,
+        borderColor: this.colors[0],
+        backgroundColor: this.colors[0],
+        tension: 0.4
+      }
+    )
+
+    if(Array.isArray(this.value[1]) && this.value[1]?.length !== 0) {
+      this.data.datasets.push(
+        {
+          label: this.toolTipLabel[1],
+          data: this.value[1],
+          fill: false,
+          borderColor: this.colors[1],
+          backgroundColor: this.colors[1],
+          tension: 0.4
+        }
+      )
+    }
+
+    this.updateChart()
 
   }
 
@@ -64,7 +87,10 @@ export class ChartComponent implements OnInit {
         this.updateChart();
         this.data.labels = this.label
         this.data.datasets[0].data = this.value[0]
-        this.data.datasets[1].data = this.value[1]
+
+        if(Array.isArray(this.value[1]) && this.value[1]?.length !== 0) {
+          this.data.datasets[1].data = this.value[1]
+        }
 
         // console.log("Chart js", this.value);
 
@@ -75,24 +101,7 @@ export class ChartComponent implements OnInit {
   initializeChart(): void {
     this.data = {
       labels: [],
-      datasets: [
-        {
-          label: this.toolTipLabel[0],
-          data: [],
-          fill: false,
-          borderColor: this.colors[0],
-          backgroundColor: this.colors[0],
-          tension: 0.4
-        },
-        {
-          label: this.toolTipLabel[1],
-          data: [],
-          fill: false,
-          borderColor: this.colors[1],
-          backgroundColor: this.colors[1],
-          tension: 0.4
-        },
-      ]
+      datasets: []
     };
 
     this.options = {

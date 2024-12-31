@@ -12,10 +12,10 @@ import { CommonModule } from '@angular/common';
 })
 export class NavbarComponent {
   routes:any = [
-    {
-      name: "OVERVIEW",
-      path: '/',
-    },
+    // {
+    //   name: "OVERVIEW",
+    //   path: '/',
+    // },
     {
       name: "STATIONS",
       path: '/stations',

@@ -97,22 +97,22 @@ export class StationsComponent {
         }
       ]
     },
-    {
-      order:4,
-      isOpen:false,
-      name:"VARNISH STATOR ASSEMBLY",
-      isEnable: true,
-      isDropDown: false,
-      ddOptions: []
-    },
-    {
-      order:5,
-      isOpen:false,
-      name:"FINAL ASSEMBLY",
-      isEnable: true,
-      isDropDown: false,
-      ddOptions: []
-    },
+    // {
+    //   order:4,
+    //   isOpen:false,
+    //   name:"VARNISH STATOR ASSEMBLY",
+    //   isEnable: true,
+    //   isDropDown: false,
+    //   ddOptions: []
+    // },
+    // {
+    //   order:5,
+    //   isOpen:false,
+    //   name:"FINAL ASSEMBLY",
+    //   isEnable: true,
+    //   isDropDown: false,
+    //   ddOptions: []
+    // },
   ]
   changeMain(order:any) {
     this.options.map((opt:any) => {

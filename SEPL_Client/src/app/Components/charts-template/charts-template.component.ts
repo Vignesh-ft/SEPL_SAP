@@ -162,7 +162,7 @@ export class ChartsTemplateComponent implements OnInit {
     // console.log("Loader State: ", this.counter, this.loader);
 
     this.sw.fetchChartData(this.stationName,`${this.endPoint}/hourly`, this.postData.hour).subscribe((response:any)=> {
-      // console.log("Hourly Data",response)
+      console.log("Hourly Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Hourly Data Recieved`);
@@ -177,7 +177,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.sw.fetchChartData(this.stationName, `${this.endPoint}/dayWise`, this.postData.day).subscribe((response:any)=> {
-      console.log("Day Data",response)
+      // console.log("Day Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Day Data Recieved`);
@@ -325,13 +325,20 @@ export class ChartsTemplateComponent implements OnInit {
 
       if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
         this.toolTipLabel = ["Rotor Count","Stator Count"]
+        // console.log("Rotor Sum", "Stator Sum");
         this.hourData1.push(data.rotor_sum);
         this.hourData2.push(data.stator_sum);
       }
 
-      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
-        this.toolTipLabel = ["Ok Count","Ng Count"]
+      if(data.ok_sum !== undefined) {
+        // console.log("OK SUM");
+        this.toolTipLabel.push("Ok Count")
         this.hourData1.push(data.ok_sum);
+      }
+
+      if(data.ng_sum !== undefined) {
+        // console.log("NG SUM");
+        this.toolTipLabel.push("Ng Count")
         this.hourData2.push(data.ng_sum);
       }
 
@@ -370,16 +377,20 @@ export class ChartsTemplateComponent implements OnInit {
         this.dayData2.push(data.stator_sum);
       }
 
-      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
-        this.toolTipLabel = ["Ok Count","Ng Count"]
+      if(data.ok_sum !== undefined) {
+        this.toolTipLabel.push("Ok Count")
         this.dayData1.push(data.ok_sum);
+      }
+
+      if(data.ng_sum !== undefined) {
+        this.toolTipLabel.push("Ng Count")
         this.dayData2.push(data.ng_sum);
       }
 
     })
 
     this.dayData = [this.dayData1, this.dayData2]
-    console.log(this.dayData);
+    // console.log(this.dayData);
   }
 
   // shiftReport(data:any) {
@@ -412,9 +423,13 @@ export class ChartsTemplateComponent implements OnInit {
         this.shiftData2.push(data.stator_sum);
       }
 
-      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
-        this.toolTipLabel = ["Ok Count","Ng Count"]
+      if(data.ok_sum !== undefined) {
+        this.toolTipLabel.push("Ok Count")
         this.shiftData1.push(data.ok_sum);
+      }
+
+      if(data.ng_sum !== undefined) {
+        this.toolTipLabel.push("Ng Count")
         this.shiftData2.push(data.ng_sum);
       }
 
@@ -453,10 +468,14 @@ export class ChartsTemplateComponent implements OnInit {
         this.monthData2.push(data.stator_sum);
       }
 
-      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
-        this.toolTipLabel = ["Ok Count","Ng Count"]
+      if(data.ok_sum !== undefined) {
+        this.toolTipLabel.push("Ok Count")
         this.monthData1.push(data.ok_sum);
-        this.monthData1.push(data.ng_sum);
+      }
+
+      if(data.ng_sum !== undefined) {
+        this.toolTipLabel.push("Ng Count")
+        this.monthData2.push(data.ng_sum);
       }
     })
 
