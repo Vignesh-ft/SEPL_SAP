@@ -1,6 +1,10 @@
 <div class="w-full h-full">
   <app-charts-template
     [templateTitle]="title"
+    [refreshInterval]=10000
+    [endPoint]="endPoint"
+    [postData]="postData"
+    [stationName]="'continuity'"
     class="w-full h-full">
   </app-charts-template>
 </div>

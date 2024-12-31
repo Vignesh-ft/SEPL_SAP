@@ -4,12 +4,13 @@ import { ChartComponent } from "../chart/chart.component";
 import { ChartAPIService } from '../../Services/chart-api.service';
 import { interval, Subscription } from 'rxjs';
 import { FilterService } from '../../Services/filter.service';
+import { LoaderComponent } from "../loader/loader.component";
 
 
 @Component({
   selector: 'app-charts-template',
   standalone: true,
-  imports: [CommonModule, ChartComponent],
+  imports: [CommonModule, ChartComponent, LoaderComponent],
   templateUrl: './charts-template.component.html',
   styleUrl: './charts-template.component.scss'
 })
@@ -18,6 +19,9 @@ export class ChartsTemplateComponent implements OnInit {
   @Input() templateTitle:string = ""
   @Input() endPoint:any
   @Input() refreshInterval:any
+  @Input() postData:any
+  @Input() stationName:any
+
   // @Input() dayWiseData:any
   // @Input() shiftWiseData:any
   // @Input() monthWiseData:any
@@ -47,6 +51,8 @@ export class ChartsTemplateComponent implements OnInit {
   monthData1:any = []
   monthData2:any = []
 
+  toolTipLabel:any = []
+
   constructor(private filterService: FilterService, private sw: ChartAPIService,){}
 
   isHourlyReport:boolean = true
@@ -60,10 +66,10 @@ export class ChartsTemplateComponent implements OnInit {
   shiftReportData:any
   monthReportData:any
 
-  hourlyBody:any = {date: "2024-07-26"}
-  dayBody:any = {fromDate: '2024-07-22', toDate: '2024-08-02'}
-  shiftBody:any = {date: "2024-07-22"}
-  monthBody:any = {fromMonth: 7, fromYear: 2024, toMonth: 9, toYear: 2024 }
+  // hourlyBody:any = {date: "2024-07-26"}
+  // dayBody:any = {fromDate: '2024-07-22', toDate: '2024-08-02'}
+  // shiftBody:any = {date: "2024-07-22"}
+  // monthBody:any = {fromMonth: 7, fromYear: 2024, toMonth: 9, toYear: 2024 }
 
   chartRoute:any = [
     {
@@ -91,6 +97,9 @@ export class ChartsTemplateComponent implements OnInit {
       isOpen:false,
     },
   ]
+
+  loader:boolean = true
+  counter:number = 0
 
 
   changeChart(order:any) {
@@ -149,26 +158,70 @@ export class ChartsTemplateComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.sw.fetchChartData(`${this.endPoint}/hourly`, this.hourlyBody).subscribe((response:any)=> {
+
+    // console.log("Loader State: ", this.counter, this.loader);
+
+    this.sw.fetchChartData(this.stationName,`${this.endPoint}/hourly`, this.postData.hour).subscribe((response:any)=> {
       // console.log("Hourly Data",response)
+      if(response) {
+        this.counter+=1
+        console.log(`${response.station} Hourly Data Recieved`);
+      }
+
+      if(this.counter == 4) {
+        this.loader = false
+        // console.log("Loader State: ", this.counter, this.loader);
+      }
+
       this.hourlyReport(response)
     })
 
-    this.sw.fetchChartData(`${this.endPoint}/dayWise`, this.dayBody).subscribe((response:any)=> {
-      // console.log("Day Data",response)
+    this.sw.fetchChartData(this.stationName, `${this.endPoint}/dayWise`, this.postData.day).subscribe((response:any)=> {
+      console.log("Day Data",response)
+      if(response) {
+        this.counter+=1
+        console.log(`${response.station} Day Data Recieved`);
+      }
+
+      if(this.counter == 4) {
+        this.loader = false
+        // console.log("Loader State: ", this.counter, this.loader);
+      }
+
       this.dailyReport(response)
     })
 
-    this.sw.fetchChartData(`${this.endPoint}/shiftWise`, this.shiftBody).subscribe((response:any)=> {
-      console.log("Shift Data",response)
+    this.sw.fetchChartData(this.stationName,`${this.endPoint}/shiftWise`, this.postData.shift).subscribe((response:any)=> {
+      // console.log("Shift Data",response)
+      if(response) {
+        this.counter+=1
+        console.log(`${response.station} Shift Data Recieved`);
+      }
+
+      if(this.counter == 4) {
+        this.loader = false
+        // console.log("Loader State: ", this.counter, this.loader);
+      }
+
       this.shiftReport(response)
 
     })
 
-    this.sw.fetchChartData(`${this.endPoint}/monthWise`, this.monthBody).subscribe((response:any)=> {
+    this.sw.fetchChartData(this.stationName, `${this.endPoint}/monthWise`, this.postData.month).subscribe((response:any)=> {
       // console.log("Month Data",response)
+      if(response) {
+        this.counter+=1
+        console.log(`${response.station} Month Data Recieved`);
+      }
+
+      if(this.counter == 4) {
+        this.loader = false
+        // console.log("Loader State: ", this.counter, this.loader);
+      }
+
       this.monthReport(response)
     })
+
     this.getData()
   }
 
@@ -219,26 +272,26 @@ export class ChartsTemplateComponent implements OnInit {
 
     this.intervalSubscription = interval(this.refreshInterval).subscribe(() => {
 
-      console.log("Updated");
+      // console.log("Updated");
 
 
-      this.sw.fetchChartData(`${this.endPoint}/hourly`, this.hourlyBody).subscribe((response:any)=> {
+      this.sw.fetchChartData(this.stationName, `${this.endPoint}/hourly`, this.postData.hour).subscribe((response:any)=> {
         // console.log("Hourly Data",response)
         this.hourlyReport(response)
       })
 
-      this.sw.fetchChartData(`${this.endPoint}/dayWise`, this.dayBody).subscribe((response:any)=> {
+      this.sw.fetchChartData(this.stationName, `${this.endPoint}/dayWise`, this.postData.day).subscribe((response:any)=> {
         // console.log("Day Data",response)
         this.dailyReport(response)
       })
 
-      this.sw.fetchChartData(`${this.endPoint}/shiftWise`, this.shiftBody).subscribe((response:any)=> {
+      this.sw.fetchChartData(this.stationName, `${this.endPoint}/shiftWise`, this.postData.shift).subscribe((response:any)=> {
         // console.log("Shift Data",response)
         this.shiftReport(response)
 
       })
 
-      this.sw.fetchChartData(`${this.endPoint}/monthWise`, this.monthBody).subscribe((response:any)=> {
+      this.sw.fetchChartData(this.stationName, `${this.endPoint}/monthWise`, this.postData.month).subscribe((response:any)=> {
         // console.log("Month Data",response)
         this.monthReport(response)
 
@@ -269,8 +322,19 @@ export class ChartsTemplateComponent implements OnInit {
     this.hourData2 = []
 
     res.hourlySums.map((data:any)=> {
-      this.hourData1.push(data.rotor_sum);
-      this.hourData2.push(data.stator_sum);
+
+      if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
+        this.toolTipLabel = ["Rotor Count","Stator Count"]
+        this.hourData1.push(data.rotor_sum);
+        this.hourData2.push(data.stator_sum);
+      }
+
+      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
+        this.toolTipLabel = ["Ok Count","Ng Count"]
+        this.hourData1.push(data.ok_sum);
+        this.hourData2.push(data.ng_sum);
+      }
+
     })
 
     this.hourData = [this.hourData1, this.hourData2]
@@ -299,12 +363,23 @@ export class ChartsTemplateComponent implements OnInit {
     this.dayData2 = []
 
     res.dailyAggregates.map((data:any)=> {
-      this.dayData1.push(data.rotor_sum);
-      this.dayData2.push(data.stator_sum);
+
+      if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
+        this.toolTipLabel = ["Rotor Count","Stator Count"]
+        this.dayData1.push(data.rotor_sum);
+        this.dayData2.push(data.stator_sum);
+      }
+
+      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
+        this.toolTipLabel = ["Ok Count","Ng Count"]
+        this.dayData1.push(data.ok_sum);
+        this.dayData2.push(data.ng_sum);
+      }
+
     })
 
     this.dayData = [this.dayData1, this.dayData2]
-    // console.log(this.dayData);
+    console.log(this.dayData);
   }
 
   // shiftReport(data:any) {
@@ -330,8 +405,19 @@ export class ChartsTemplateComponent implements OnInit {
     this.shiftData2 = []
 
     res.shiftSums.map((data:any)=> {
-      this.shiftData1.push(data.rotor_sum);
-      this.shiftData2.push(data.stator_sum);
+
+      if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
+        this.toolTipLabel = ["Rotor Count","Stator Count"]
+        this.shiftData1.push(data.rotor_sum);
+        this.shiftData2.push(data.stator_sum);
+      }
+
+      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
+        this.toolTipLabel = ["Ok Count","Ng Count"]
+        this.shiftData1.push(data.ok_sum);
+        this.shiftData2.push(data.ng_sum);
+      }
+
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
@@ -361,8 +447,17 @@ export class ChartsTemplateComponent implements OnInit {
     this.monthData2 = []
 
     res.monthSums.map((data:any)=> {
-      this.monthData1.push(data.rotor_sum);
-      this.monthData2.push(data.stator_sum);
+      if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
+        this.toolTipLabel = ["Rotor Count","Stator Count"]
+        this.monthData1.push(data.rotor_sum);
+        this.monthData2.push(data.stator_sum);
+      }
+
+      else if(data.ok_sum !== undefined && data.ng_sum !== undefined) {
+        this.toolTipLabel = ["Ok Count","Ng Count"]
+        this.monthData1.push(data.ok_sum);
+        this.monthData1.push(data.ng_sum);
+      }
     })
 
     this.monthData = [this.monthData1, this.monthData2]

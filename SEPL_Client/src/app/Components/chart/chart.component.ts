@@ -22,6 +22,7 @@ export class ChartComponent implements OnInit {
   @Input() legend:any
   @Input() showValue:any
   @Input() type:any | "line"
+  @Input() toolTipLabel:any
 
   rotorSum:any = []
   statorSum:any = []
@@ -35,8 +36,6 @@ export class ChartComponent implements OnInit {
   constructor(private sw: ChartAPIService) {}
 
   ngOnInit(): void {
-    // console.log(this.value, this.label);
-
     if(this.lineColors === "hour"){
       this.colors = chartColors.hourReport
     }
@@ -53,6 +52,9 @@ export class ChartComponent implements OnInit {
     this.updateChart()
     // this.distributeValue(this.value)
     this.initializeChart();
+    this.data.labels = this.label
+    this.data.datasets[0].data = this.value[0]
+    this.data.datasets[1].data = this.value[1]
 
   }
 
@@ -75,7 +77,7 @@ export class ChartComponent implements OnInit {
       labels: [],
       datasets: [
         {
-          label: "Rotor Count",
+          label: this.toolTipLabel[0],
           data: [],
           fill: false,
           borderColor: this.colors[0],
@@ -83,7 +85,7 @@ export class ChartComponent implements OnInit {
           tension: 0.4
         },
         {
-          label: "Stator Count",
+          label: this.toolTipLabel[1],
           data: [],
           fill: false,
           borderColor: this.colors[1],
@@ -144,7 +146,7 @@ export class ChartComponent implements OnInit {
         this.primeChart.chart.update()
       }
         if (this.label.length > this.showValue) {
-          console.log("Shifted")
+          // console.log("Shifted")
           this.label.shift();
           this.rotorSum.shift();
           this.statorSum.shift()
