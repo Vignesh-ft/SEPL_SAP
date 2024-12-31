@@ -41,8 +41,8 @@ const pool = new Pool({
   function hourFilterWithMissingHours(data) {
     const hourlySums = Array.from({ length: 24 }, (_, hour) => ({
       hour: hour.toString().padStart(2, '0'),
-      rotor_sum: 0,
-      stator_sum: 0,
+      ok_sum: 0, // Renamed for ok_count
+      ng_sum: 0, // Renamed for ng_count
     }));
   
     data.forEach((datum) => {
@@ -50,8 +50,8 @@ const pool = new Pool({
       let hourIndex = parseInt(hour, 10); // Convert hour to an integer
   
       // Update the sums for the respective hour
-      hourlySums[hourIndex].rotor_sum += datum.rotor_count || 0; // Use 0 if null
-      hourlySums[hourIndex].stator_sum += datum.stator_count || 0; // Use 0 if null
+      hourlySums[hourIndex].ok_sum += datum.rotor_count || 0; // Use 0 if null
+      hourlySums[hourIndex].ng_sum += datum.stator_count || 0; // Use 0 if null
     });
   
     const hourlyLabels = hourlySums.map((entry) => `${entry.hour}:00`);
@@ -67,7 +67,6 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name and date are required" });
     }
   
-    console.log
     // Validate station name to prevent SQL injection
     const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
@@ -145,8 +144,8 @@ const pool = new Pool({
     while (currentDate <= endDate) {
       const formattedDate = formatDate(currentDate);
       dailySums[formattedDate] = {
-        rotor_sum: 0,
-        stator_sum: 0,
+        ok_sum: 0,
+        ng_sum: 0,
       };
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -157,18 +156,20 @@ const pool = new Pool({
       if (dailySums[date]) {
         dailySums[date].rotor_sum += datum.ok_count; // Use `ok_count` for rotor_sum
         dailySums[date].stator_sum += datum.ng_count; // Use `ng_count` for stator_sum
+        dailySums[date].ok_sum += datum.ok_count; // Aggregate `ok_count` as ok_sum
+        dailySums[date].ng_sum += datum.ng_count; // Aggregate `ng_count` as ng_sum
       }
     });
   
     const dailyLabels = Object.keys(dailySums);
     const dailyAggregates = dailyLabels.map((date) => ({
       date,
-      rotor_sum: dailySums[date].rotor_sum,
-      stator_sum: dailySums[date].stator_sum,
+      ok_sum: dailySums[date].ok_sum,
+      ng_sum: dailySums[date].ng_sum,
     }));
   
     return { dailyLabels, dailyAggregates };
-  }  
+  }
 
   router.post('/:stationName/dayWise', async (req, res) => {
     const { stationName } = req.params;
@@ -239,9 +240,9 @@ const pool = new Pool({
   const sumCountsByShift = (data) => {
     // Initialize counts for each shift with default values
     const shiftCounts = {
-      A: { rotor_sum: 0, stator_sum: 0 },
-      B: { rotor_sum: 0, stator_sum: 0 },
-      C: { rotor_sum: 0, stator_sum: 0 },
+      A: { ok_sum: 0, ng_sum: 0 },
+      B: { ok_sum: 0, ng_sum: 0 },
+      C: { ok_sum: 0, ng_sum: 0 },
     };
   
     // If there is data, sum the counts for each shift
@@ -249,8 +250,8 @@ const pool = new Pool({
       data.forEach((row) => {
         const { shift, rotor_count = 0, stator_count = 0 } = row; // Default missing counts to 0
         if (shiftCounts[shift]) {
-          shiftCounts[shift].rotor_sum += rotor_count;
-          shiftCounts[shift].stator_sum += stator_count;
+          shiftCounts[shift].ok_sum += stator_count;
+          shiftCounts[shift].ng_sum += rotor_count;
         }
       });
     }
@@ -258,8 +259,8 @@ const pool = new Pool({
     // Convert the object to an array for the response
     return Object.keys(shiftCounts).map((shift) => ({
       shift,
-      rotor_sum: shiftCounts[shift].rotor_sum ?? 0, // Default to 0 if null
-      stator_sum: shiftCounts[shift].stator_sum ?? 0, // Default to 0 if null
+      ok_sum: shiftCounts[shift].ok_sum ?? 0, // Default to 0 if null
+      ng_sum: shiftCounts[shift].ng_sum ?? 0, // Default to 0 if null
     }));
   };
    
@@ -342,8 +343,8 @@ const pool = new Pool({
       monthlyData.push({
         year: currentYear,
         month: currentMonth,
-        rotor_count: 0,
-        stator_count: 0,
+        ok_count: 0,
+        ng_count: 0,
       });
   
       currentMonth++;
@@ -358,8 +359,8 @@ const pool = new Pool({
       const monthIndex = (row.year - fromYear) * 12 + (row.month - fromMonth);
       if (monthIndex >= 0 && monthIndex < monthlyData.length) {
         // Convert counts to numbers to avoid issues with string aggregation
-        monthlyData[monthIndex].rotor_count += parseInt(row.ok_count) || 0;
-        monthlyData[monthIndex].stator_count += parseInt(row.ng_count) || 0;
+        monthlyData[monthIndex].ok_count += parseInt(row.ok_count) || 0;
+        monthlyData[monthIndex].ng_count += parseInt(row.ng_count) || 0;
       }
     });
   
@@ -367,61 +368,54 @@ const pool = new Pool({
     return monthlyData.map(monthData => ({
       month: getMonthName(monthData.month), // Convert month number to name
       year: monthData.year, // Year (e.g., 2024)
-      rotor_sum: monthData.rotor_count,
-      stator_sum: monthData.stator_count,
+      ok_sum: monthData.ok_count,
+      ng_sum: monthData.ng_count,
     }));
   };
   
   router.post('/:stationName/monthWise', async (req, res) => {
     const { stationName } = req.params;
     const { fromMonth, fromYear, toMonth, toYear } = req.body;
-   
+  
     if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
-   
+  
     const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
-   
-    // Check if the months and years are valid
+  
     if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
       return res.status(400).json({ message: "Invalid month. Please provide a month between 1 and 12." });
     }
-   
+  
     if (fromYear > toYear || (fromYear === toYear && fromMonth > toMonth)) {
       return res.status(400).json({ message: "From date must be earlier than to date" });
     }
-   
+  
     try {
-      // Step 1: Fetch data for the given range of months and years
       const data = await getMonthlyDataForRange(stationName, fromMonth, fromYear, toMonth, toYear);
-   
-      // Step 2: Aggregate the data for the range
       const aggregatedData = aggregateMonthlyDataForRange(data, fromMonth, fromYear, toMonth, toYear);
-   
-      // Step 3: Format the response
+  
       const formattedResponse = aggregatedData.map(monthData => ({
         month: `${monthData.month} ${monthData.year}`,
-        rotor_sum: monthData.rotor_sum,
-        stator_sum: monthData.stator_sum,
+        ok_sum: monthData.ok_sum,
+        ng_sum: monthData.ng_sum,
       }));
-   
-      // const temp = [...temp, formattedResponse]
-      const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`)
-   
-      // Step 4: Send the response with the aggregated data
+  
+      const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`);
+  
       res.json({
         station: stationName,
         monthLabels,
         monthSums: formattedResponse
-       
       });
     } catch (error) {
       console.error(`Error in endpoint /${stationName}/monthWise:`, error.message);
       res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
     }
   });
+  
 
 module.exports = router;
