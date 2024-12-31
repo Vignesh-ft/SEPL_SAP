@@ -16,8 +16,8 @@ const pool = new Pool({
  
 });
 
-// Fetch continuity test data
-const fetchContinuityTestData = async (tableName, date) => {
+
+    const fetchData = async (tableName, date) => {
     const query = `
       SELECT
         date,
@@ -41,8 +41,8 @@ const fetchContinuityTestData = async (tableName, date) => {
   function hourFilterWithMissingHours(data) {
     const hourlySums = Array.from({ length: 24 }, (_, hour) => ({
       hour: hour.toString().padStart(2, '0'),
-      ok_sum: 0, // Renamed for ok_count
-      ng_sum: 0, // Renamed for ng_count
+      rotor_sum: 0,
+      stator_sum: 0,
     }));
   
     data.forEach((datum) => {
@@ -50,8 +50,8 @@ const fetchContinuityTestData = async (tableName, date) => {
       let hourIndex = parseInt(hour, 10); // Convert hour to an integer
   
       // Update the sums for the respective hour
-      hourlySums[hourIndex].ok_sum += datum.rotor_count || 0; // Use 0 if null
-      hourlySums[hourIndex].ng_sum += datum.stator_count || 0; // Use 0 if null
+      hourlySums[hourIndex].rotor_sum += datum.rotor_count || 0; // Use 0 if null
+      hourlySums[hourIndex].stator_sum += datum.stator_count || 0; // Use 0 if null
     });
   
     const hourlyLabels = hourlySums.map((entry) => `${entry.hour}:00`);
@@ -67,15 +67,16 @@ const fetchContinuityTestData = async (tableName, date) => {
       return res.status(400).json({ message: "Station name and date are required" });
     }
   
+    console.log
     // Validate station name to prevent SQL injection
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
   
     try {
       // Fetch raw data from the specified table
-      const rawData = await fetchContinuityTestData(stationName, date);
+      const rawData = await fetchData(stationName, date);
   
       // Process data with the hourFilterWithMissingHours function
       const { hourlyLabels, hourlySums } = hourFilterWithMissingHours(rawData);
@@ -91,7 +92,6 @@ const fetchContinuityTestData = async (tableName, date) => {
       res.status(500).json({ message: "Failed to fetch hourly data", error: error.message });
     }
   });
-  
 
   //daywise
   const fetchTableForDay = async (stationName, fromDate, toDate) => {
@@ -145,8 +145,8 @@ const fetchContinuityTestData = async (tableName, date) => {
     while (currentDate <= endDate) {
       const formattedDate = formatDate(currentDate);
       dailySums[formattedDate] = {
-        ok_sum: 0,
-        ng_sum: 0,
+        rotor_sum: 0,
+        stator_sum: 0,
       };
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -157,65 +157,67 @@ const fetchContinuityTestData = async (tableName, date) => {
       if (dailySums[date]) {
         dailySums[date].rotor_sum += datum.ok_count; // Use `ok_count` for rotor_sum
         dailySums[date].stator_sum += datum.ng_count; // Use `ng_count` for stator_sum
-        dailySums[date].ok_sum += datum.ok_count; // Aggregate `ok_count` as ok_sum
-        dailySums[date].ng_sum += datum.ng_count; // Aggregate `ng_count` as ng_sum
       }
     });
   
     const dailyLabels = Object.keys(dailySums);
     const dailyAggregates = dailyLabels.map((date) => ({
       date,
-      ok_sum: dailySums[date].ok_sum,
-      ng_sum: dailySums[date].ng_sum,
+      rotor_sum: dailySums[date].rotor_sum,
+      stator_sum: dailySums[date].stator_sum,
     }));
   
     return { dailyLabels, dailyAggregates };
-  }
+  }  
 
   router.post('/:stationName/dayWise', async (req, res) => {
     const { stationName } = req.params;
     const { fromDate, toDate } = req.body;
-  
+   
     if (!stationName || !fromDate || !toDate) {
       return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
     }
-  
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+   
+    const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
-  
+   
+    // Helper function to add one day to a date
     const addOneDay = (date) => {
       const d = new Date(date);
-      d.setDate(d.getDate() + 1);
-      return d.toISOString().split('T')[0];
+      d.setDate(d.getDate() + 1); // Add one day
+      return d.toISOString().split('T')[0]; // Return in YYYY-MM-DD format
     };
-  
+   
     try {
+      // Fetch the data for the specified date range
       const data = await fetchTableForDay(stationName, fromDate, toDate);
-  
+   
+      // Process the data for daily aggregation
       const { dailyLabels, dailyAggregates } = dateFilterWithMissingDates(data, fromDate, toDate);
-  
+   
+      // Add one day to fromDate, toDate and all dailyLabels
       const updatedFromDate = addOneDay(fromDate);
       const updatedToDate = addOneDay(toDate);
       const updatedDailyLabels = dailyLabels.map(date => addOneDay(date));
-      dailyAggregates.forEach((aggregate, index) => {
-        aggregate.date = updatedDailyLabels[index];
-      });
-  
+      dailyAggregates.map((data, index)=> {
+        data.date = updatedDailyLabels[index]
+      })
+   
+   
       res.json({
         station: stationName,
         fromDate: updatedFromDate,
         toDate: updatedToDate,
         dailyLabels: updatedDailyLabels,
-        dailyAggregates,
+        dailyAggregates
       });
     } catch (error) {
-      console.error(`Error in endpoint /${stationName}/dayWise:`, error.message);
+      console.error(`Error in endpoint /${stationName}/groupby:`, error.message);
       res.status(500).json({ message: "Failed to fetch daily grouped data", error: error.message });
     }
   });
-  
 
   //shiftwise
   const getData = async (stationName, date) => {
@@ -237,9 +239,9 @@ const fetchContinuityTestData = async (tableName, date) => {
   const sumCountsByShift = (data) => {
     // Initialize counts for each shift with default values
     const shiftCounts = {
-      A: { ok_sum: 0, ng_sum: 0 },
-      B: { ok_sum: 0, ng_sum: 0 },
-      C: { ok_sum: 0, ng_sum: 0 },
+      A: { rotor_sum: 0, stator_sum: 0 },
+      B: { rotor_sum: 0, stator_sum: 0 },
+      C: { rotor_sum: 0, stator_sum: 0 },
     };
   
     // If there is data, sum the counts for each shift
@@ -247,8 +249,8 @@ const fetchContinuityTestData = async (tableName, date) => {
       data.forEach((row) => {
         const { shift, rotor_count = 0, stator_count = 0 } = row; // Default missing counts to 0
         if (shiftCounts[shift]) {
-          shiftCounts[shift].ok_sum += stator_count;
-          shiftCounts[shift].ng_sum += rotor_count;
+          shiftCounts[shift].rotor_sum += rotor_count;
+          shiftCounts[shift].stator_sum += stator_count;
         }
       });
     }
@@ -256,8 +258,8 @@ const fetchContinuityTestData = async (tableName, date) => {
     // Convert the object to an array for the response
     return Object.keys(shiftCounts).map((shift) => ({
       shift,
-      ok_sum: shiftCounts[shift].ok_sum ?? 0, // Default to 0 if null
-      ng_sum: shiftCounts[shift].ng_sum ?? 0, // Default to 0 if null
+      rotor_sum: shiftCounts[shift].rotor_sum ?? 0, // Default to 0 if null
+      stator_sum: shiftCounts[shift].stator_sum ?? 0, // Default to 0 if null
     }));
   };
    
@@ -269,7 +271,7 @@ const fetchContinuityTestData = async (tableName, date) => {
       return res.status(400).json({ message: "Station name and date are required" });
     }
    
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -295,7 +297,7 @@ const fetchContinuityTestData = async (tableName, date) => {
     }
   });
 
-  //monthwise
+  //mothwise
   const getMonthlyDataForRange = async (stationName, fromMonth, fromYear, toMonth, toYear) => {
     const query = `
       SELECT EXTRACT(MONTH FROM date) AS month, EXTRACT(YEAR FROM date) AS year,
@@ -311,7 +313,7 @@ const fetchContinuityTestData = async (tableName, date) => {
       // Fetch data for the given range of months and years
       
       const result = await pool.query(query, [fromYear, fromMonth, toYear, toMonth]);
-         
+        //console.log(result.rows);
       return result.rows; // Returns an array of objects with year, month, rotor_count, stator_count
     } catch (error) {
       console.error(`Error fetching monthly data for ${stationName}:`, error.message);
@@ -340,8 +342,8 @@ const fetchContinuityTestData = async (tableName, date) => {
       monthlyData.push({
         year: currentYear,
         month: currentMonth,
-        ok_count: 0,
-        ng_count: 0,
+        rotor_count: 0,
+        stator_count: 0,
       });
   
       currentMonth++;
@@ -356,8 +358,8 @@ const fetchContinuityTestData = async (tableName, date) => {
       const monthIndex = (row.year - fromYear) * 12 + (row.month - fromMonth);
       if (monthIndex >= 0 && monthIndex < monthlyData.length) {
         // Convert counts to numbers to avoid issues with string aggregation
-        monthlyData[monthIndex].ok_count += parseInt(row.ok_count) || 0;
-        monthlyData[monthIndex].ng_count += parseInt(row.ng_count) || 0;
+        monthlyData[monthIndex].rotor_count += parseInt(row.ok_count) || 0;
+        monthlyData[monthIndex].stator_count += parseInt(row.ng_count) || 0;
       }
     });
   
@@ -365,54 +367,61 @@ const fetchContinuityTestData = async (tableName, date) => {
     return monthlyData.map(monthData => ({
       month: getMonthName(monthData.month), // Convert month number to name
       year: monthData.year, // Year (e.g., 2024)
-      ok_sum: monthData.ok_count,
-      ng_sum: monthData.ng_count,
+      rotor_sum: monthData.rotor_count,
+      stator_sum: monthData.stator_count,
     }));
   };
   
   router.post('/:stationName/monthWise', async (req, res) => {
     const { stationName } = req.params;
     const { fromMonth, fromYear, toMonth, toYear } = req.body;
-  
+   
     if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
-  
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+   
+    const validStations = ['sp_test_auto', 'sp_test_mannual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
-  
+   
+    // Check if the months and years are valid
     if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
       return res.status(400).json({ message: "Invalid month. Please provide a month between 1 and 12." });
     }
-  
+   
     if (fromYear > toYear || (fromYear === toYear && fromMonth > toMonth)) {
       return res.status(400).json({ message: "From date must be earlier than to date" });
     }
-  
+   
     try {
+      // Step 1: Fetch data for the given range of months and years
       const data = await getMonthlyDataForRange(stationName, fromMonth, fromYear, toMonth, toYear);
+   
+      // Step 2: Aggregate the data for the range
       const aggregatedData = aggregateMonthlyDataForRange(data, fromMonth, fromYear, toMonth, toYear);
-  
+   
+      // Step 3: Format the response
       const formattedResponse = aggregatedData.map(monthData => ({
         month: `${monthData.month} ${monthData.year}`,
-        ok_sum: monthData.ok_sum,
-        ng_sum: monthData.ng_sum,
+        rotor_sum: monthData.rotor_sum,
+        stator_sum: monthData.stator_sum,
       }));
-  
-      const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`);
-  
+   
+      // const temp = [...temp, formattedResponse]
+      const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`)
+   
+      // Step 4: Send the response with the aggregated data
       res.json({
         station: stationName,
         monthLabels,
         monthSums: formattedResponse
+       
       });
     } catch (error) {
       console.error(`Error in endpoint /${stationName}/monthWise:`, error.message);
       res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
     }
   });
-  
 
-  module.exports = router;
+module.exports = router;
