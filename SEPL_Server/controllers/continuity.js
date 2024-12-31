@@ -5,16 +5,16 @@ require('dotenv').config();
  
 // Database connection configuration for PostgreSQL
 const pool = new Pool({
-  user: 'PostgreAWS',       // Database username
-  host: 'awspostgredb.celv4zrdnxgf.ap-south-1.rds.amazonaws.com',       // Database host
-  database: 'SEPL',   // Database name
-  password: 'Robis1234', // Database password
-  port: process.env.DB_PORT,
-  ssl: {
-    rejectUnauthorized: false // Set to true if you have a valid SSL certificate
-  }               // Default PostgreSQL port
- 
-});
+    user: process.env.DB_USER,       // Database username
+    host: process.env.DB_HOST,       // Database host
+    database: process.env.DB_NAME,   // Database name
+    password: process.env.DB_PASSWORD, // Database password
+    port: process.env.DB_PORT,
+    ssl: {
+      rejectUnauthorized: false // Set to true if you have a valid SSL certificate
+    }               // Default PostgreSQL port
+   
+  });
 
 // Fetch continuity test data
 const fetchContinuityTestData = async (tableName, date) => {
