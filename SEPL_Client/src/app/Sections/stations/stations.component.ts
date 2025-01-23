@@ -10,11 +10,12 @@ import { SpTestAutoComponent } from "./Individual_Stations/sp-test-auto/sp-test-
 import { SpTestMannualComponent } from "./Individual_Stations/sp-test-mannual/sp-test-mannual.component";
 import { VarnishStatorAssemblyComponent } from "./Individual_Stations/varnish-stator-assembly/varnish-stator-assembly.component";
 import { FinalAssemblyComponent } from "./Individual_Stations/final-assembly/final-assembly.component";
+import { FgStationComponent } from "./Individual_Stations/fg-station/fg-station.component";
 
 @Component({
   selector: 'app-stations',
   standalone: true,
-  imports: [CommonModule, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent, SlotPaperInsertionMannualComponent, ContinuityTestAutoComponent, ContinuityTestMannualComponent, SpTestAutoComponent, SpTestMannualComponent, VarnishStatorAssemblyComponent, FinalAssemblyComponent],
+  imports: [CommonModule, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent, SlotPaperInsertionMannualComponent, ContinuityTestAutoComponent, ContinuityTestMannualComponent, SpTestAutoComponent, SpTestMannualComponent, VarnishStatorAssemblyComponent, FinalAssemblyComponent, FgStationComponent],
   templateUrl: './stations.component.html',
   styleUrl: './stations.component.scss'
 })
@@ -97,14 +98,14 @@ export class StationsComponent {
         }
       ]
     },
-    // {
-    //   order:4,
-    //   isOpen:false,
-    //   name:"VARNISH STATOR ASSEMBLY",
-    //   isEnable: true,
-    //   isDropDown: false,
-    //   ddOptions: []
-    // },
+    {
+      order:4,
+      isOpen:false,
+      name:"FG STATION",
+      isEnable: true,
+      isDropDown: false,
+      ddOptions: []
+    },
     // {
     //   order:5,
     //   isOpen:false,
