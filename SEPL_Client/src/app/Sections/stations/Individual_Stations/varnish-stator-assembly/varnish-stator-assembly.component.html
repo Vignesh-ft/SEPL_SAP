@@ -1,6 +1,10 @@
 <div class="w-full h-full">
   <app-charts-template
-    [templateTitle]="title"
-    class="w-full h-full">
+  [templateTitle]="title"
+  [refreshInterval]=10000
+  [endPoint] = 'endPoint'
+  [stationName]="'varnish_stator_assembly'"
+  [postData]="postData"
+  class="w-full h-full">
   </app-charts-template>
 </div>

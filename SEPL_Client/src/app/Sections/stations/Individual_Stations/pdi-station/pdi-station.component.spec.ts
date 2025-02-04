@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { FinalAssemblyComponent } from './final-assembly.component';
+import { PdiStationComponent } from './pdi-station.component';
 
-describe('FinalAssemblyComponent', () => {
-  let component: FinalAssemblyComponent;
-  let fixture: ComponentFixture<FinalAssemblyComponent>;
+describe('PdiStationComponent', () => {
+  let component: PdiStationComponent;
+  let fixture: ComponentFixture<PdiStationComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FinalAssemblyComponent]
+      imports: [PdiStationComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(FinalAssemblyComponent);
+    fixture = TestBed.createComponent(PdiStationComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

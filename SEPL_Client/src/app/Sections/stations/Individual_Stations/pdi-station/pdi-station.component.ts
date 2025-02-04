@@ -2,15 +2,15 @@ import { Component } from '@angular/core';
 import { ChartsTemplateComponent } from '../../../../Components/charts-template/charts-template.component';
 
 @Component({
-  selector: 'app-varnish-stator-assembly',
+  selector: 'app-pdi-station',
   standalone: true,
   imports: [ChartsTemplateComponent],
-  templateUrl: './varnish-stator-assembly.component.html',
-  styleUrl: './varnish-stator-assembly.component.scss'
+  templateUrl: './pdi-station.component.html',
+  styleUrl: './pdi-station.component.scss'
 })
-export class VarnishStatorAssemblyComponent {
-  title:any = "VARNISH STATOR ASSEMBLY"
-  endPoint:string = "varnish_stator_assembly"
+export class PdiStationComponent {
+  title:any = "PDI STATION"
+  endPoint:string = "pdi_station"
   //use the below code if date to be hard coded
   // hourlyBody:any = {date: "2024-07-26"}
   // dayBody:any = {fromDate: '2024-07-24', toDate: '2024-08-02'}
