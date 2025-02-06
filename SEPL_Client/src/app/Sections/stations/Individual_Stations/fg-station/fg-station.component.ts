@@ -10,7 +10,7 @@ import { ChartsTemplateComponent } from '../../../../Components/charts-template/
 })
 export class FgStationComponent {
   title:any = "FG STATION"
-  endPoint = "continuity_test_auto"
+  endPoint = "fg_packing_station"
 
    // Get current date
    currentDate: Date = new Date();
