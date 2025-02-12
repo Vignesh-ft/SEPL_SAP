@@ -68,7 +68,7 @@ const pool = new Pool({
     }
   
     // Validate station name to prevent SQL injection
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -179,7 +179,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
     }
    
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -272,7 +272,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name and date are required" });
     }
    
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -381,7 +381,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
   
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['sp_test_auto', 'sp_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }

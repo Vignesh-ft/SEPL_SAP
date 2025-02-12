@@ -22,9 +22,9 @@ const pool = new Pool({
     date,
     cycle_time_end,
     ok_count AS rotor_count -- Alias to match expected property
-  FROM ${tableName}
-  WHERE date = $1
-  ORDER BY cycle_time_end;
+    FROM ${tableName}
+    WHERE date = $1
+    ORDER BY cycle_time_end;
 `;
 
     try {
@@ -65,7 +65,7 @@ const pool = new Pool({
         }
 
         // Validate station name to prevent SQL injection
-        const validStations = ['slot_paper_insertion_auto', 'slot_paper_insertion_mannual'];
+        const validStations = ['slot_paper_auto', 'slot_paper_manual'];
         if (!validStations.includes(stationName)) {
             return res.status(400).json({ message: "Invalid station name" });
         }
@@ -171,7 +171,7 @@ const pool = new Pool({
             return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
         }
 
-        const validStations = ['slot_paper_insertion_auto', 'slot_paper_insertion_mannual'];
+        const validStations = ['slot_paper_auto', 'slot_paper_manual'];
         if (!validStations.includes(stationName)) {
             return res.status(400).json({ message: "Invalid station name" });
         }
@@ -257,7 +257,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name and date are required" });
     }
   
-    const validStations = ['slot_paper_insertion_auto', 'slot_paper_insertion_mannual'];
+    const validStations = ['slot_paper_auto', 'slot_paper_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -364,7 +364,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
   
-    const validStations = ['slot_paper_insertion_auto', 'slot_paper_insertion_mannual'];
+    const validStations = ['slot_paper_auto', 'slot_paper_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }

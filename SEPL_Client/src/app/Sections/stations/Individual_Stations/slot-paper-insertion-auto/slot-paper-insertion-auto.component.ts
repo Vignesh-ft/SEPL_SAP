@@ -10,7 +10,7 @@ import { ChartsTemplateComponent } from '../../../../Components/charts-template/
 })
 export class SlotPaperInsertionAutoComponent {
   title:any = "SLOT PAPER INSERTION AUTO"
-  endPoint = "slot_paper_insertion_auto"
+  endPoint = "slot_paper_auto"
 
   // Get current date
   currentDate: Date = new Date();

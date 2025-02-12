@@ -10,7 +10,7 @@ import { ChartsTemplateComponent } from "../../../../Components/charts-template/
 })
 export class StampingStationAComponent {
   title:any = "STAMPING STATION A"
-  endPoint:string = "stamping_station_a"
+  endPoint:string = "stamping_st1_total_count"
 
   // Get current date
   currentDate: Date = new Date();

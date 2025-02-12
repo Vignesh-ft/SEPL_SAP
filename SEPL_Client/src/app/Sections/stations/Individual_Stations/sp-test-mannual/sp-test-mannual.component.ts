@@ -9,8 +9,8 @@ import { Component } from '@angular/core';
   styleUrl: './sp-test-mannual.component.scss'
 })
 export class SpTestMannualComponent {
-  title:any = "SP TEST MANNUAL"
-  endPoint = "sp_test_mannual"
+  title:any = "SP TEST MANUAL"
+  endPoint = "sp_test_manual"
 
   // Get current date
   currentDate: Date = new Date();

@@ -68,7 +68,7 @@ const fetchContinuityTestData = async (tableName, date) => {
     }
   
     // Validate station name to prevent SQL injection
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['continuity_test_auto', 'continuity_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -180,7 +180,7 @@ const fetchContinuityTestData = async (tableName, date) => {
       return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
     }
   
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['continuity_test_auto', 'continuity_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -269,7 +269,7 @@ const fetchContinuityTestData = async (tableName, date) => {
       return res.status(400).json({ message: "Station name and date are required" });
     }
    
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['continuity_test_auto', 'continuity_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -378,7 +378,7 @@ const fetchContinuityTestData = async (tableName, date) => {
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
   
-    const validStations = ['continuity_test_auto', 'continuity_test_mannual'];
+    const validStations = ['continuity_test_auto', 'continuity_test_manual'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }

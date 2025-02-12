@@ -9,8 +9,8 @@ import { ChartsTemplateComponent } from '../../../../Components/charts-template/
   styleUrl: './continuity-test-mannual.component.scss'
 })
 export class ContinuityTestMannualComponent {
-  title:any = "CONTINUITY TEST MANNUAL"
-  endPoint = "continuity_test_mannual"
+  title:any = "CONTINUITY TEST MANUAL"
+  endPoint = "continuity_test_manual"
 
   // Get current date
   currentDate: Date = new Date();

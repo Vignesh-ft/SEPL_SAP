@@ -69,7 +69,7 @@ router.post('/:stationName/hourly', async (req, res) => {
   }
  
   // Validate station name to prevent SQL injection
-  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  const validStations = ['stamping_st1_total_count', 'stamping_st2_total_count'];
   if (!validStations.includes(stationName)) {
     return res.status(400).json({ message: "Invalid station name" });
   }
@@ -196,7 +196,7 @@ router.post('/:stationName/dayWise', async (req, res) => {
     return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
   }
  
-  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  const validStations = ['stamping_st1_total_count', 'stamping_st2_total_count'];
   if (!validStations.includes(stationName)) {
     return res.status(400).json({ message: "Invalid station name" });
   }
@@ -288,7 +288,7 @@ router.post('/:stationName/shiftWise', async (req, res) => {
     return res.status(400).json({ message: "Station name and date are required" });
   }
  
-  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  const validStations = ['stamping_st1_total_count', 'stamping_st2_total_count'];
   if (!validStations.includes(stationName)) {
     return res.status(400).json({ message: "Invalid station name" });
   }
@@ -392,7 +392,7 @@ router.post('/:stationName/monthWise', async (req, res) => {
     return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
   }
  
-  const validStations = ['stamping_station_a', 'stamping_station_b'];
+  const validStations = ['stamping_st1_total_count', 'stamping_st2_total_count'];
   if (!validStations.includes(stationName)) {
     return res.status(400).json({ message: "Invalid station name" });
   }

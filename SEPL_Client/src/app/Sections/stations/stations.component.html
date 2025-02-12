@@ -62,15 +62,12 @@
       <app-sp-test-mannual class="w-full h-full"></app-sp-test-mannual>
     }
 
-    @if(options[4].isOpen) {
-      <app-fg-station class="w-full h-full"></app-fg-station>
-    }
 
-    @if(options[5].isOpen) {
+    @if(options[4].isOpen) {
       <app-varnish-stator-assembly class="w-full h-full"></app-varnish-stator-assembly>
     }
 
-    @if(options[6].isOpen) {
+    @if(options[5].isOpen) {
       <app-rotor-shaft-assembly class="w-full h-full"></app-rotor-shaft-assembly>
     }
 
@@ -78,8 +75,16 @@
       <app-pdi-station class="w-full h-full"></app-pdi-station>
     }
 
-    @if(options[8].isOpen) {
+    @if(options[6].isOpen) {
       <app-final-assembly-station class="w-full h-full" ></app-final-assembly-station>
+    }
+
+    @if(options[8].isOpen && options[8].ddOptions[0].isOpen) {
+      <app-fg-station-inward class="w-full h-full"></app-fg-station-inward>
+    }
+
+    @if(options[8].isOpen && options[8].ddOptions[1].isOpen) {
+      <app-fg-station-outward class="w-full h-full"></app-fg-station-outward>
     }
 
 

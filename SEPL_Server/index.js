@@ -4,7 +4,12 @@ const { router } = require('./controllers/moController'); // Import processData 
 const continuityTestRoutes = require('./controllers/continuity');
 const slot_paper = require('./controllers/slot_paper_insertion');
 const sp_test = require('./controllers/sp_test');
-const fg_station = require('./controllers/fg_station');
+const varnish_stator_assembly = require('./controllers/varnish_stator');
+const pdi_station = require('./controllers/pdi_station');
+const fg_stocktable_inward = require('./controllers/fg_station_inward');
+const fg_stocktable_outward = require('./controllers/fg_station_outward');
+const rotor_shaft_assembly = require('./controllers/rotor_shaft');
+const final_assembly_traceability = require('./controllers/final_assembly');
 
 const app = express();
 const PORT = 3000;
@@ -18,7 +23,12 @@ app.use('/stamping_station', router);
 app.use('/continuity', continuityTestRoutes);
 app.use('/slot_paper', slot_paper);
 app.use('/sp_test', sp_test);
-app.use('/fg_packing_station', fg_station);
+app.use('/varnish_stator_assembly', varnish_stator_assembly);
+app.use('/pdi_station', pdi_station);
+app.use('/fg_stocktable/inward', fg_stocktable_inward);
+app.use('/fg_stocktable/outward', fg_stocktable_outward);
+app.use('/rotorShaft', rotor_shaft_assembly);
+app.use('/final_assembly', final_assembly_traceability);
 
 // Start the process when the server starts
 const start = async () => {

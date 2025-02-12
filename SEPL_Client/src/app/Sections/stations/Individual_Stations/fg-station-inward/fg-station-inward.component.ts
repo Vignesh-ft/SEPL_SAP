@@ -2,15 +2,17 @@ import { Component } from '@angular/core';
 import { ChartsTemplateComponent } from '../../../../Components/charts-template/charts-template.component';
 
 @Component({
-  selector: 'app-stamping-station-b',
+  selector: 'app-fg-station-inward',
   standalone: true,
   imports: [ChartsTemplateComponent],
-  templateUrl: './stamping-station-b.component.html',
-  styleUrl: './stamping-station-b.component.scss'
+  templateUrl: './fg-station-inward.component.html',
+  styleUrl: './fg-station-inward.component.scss'
 })
-export class StampingStationBComponent {
-  title:any = "STAMPING STATION B"
-  endPoint:string = "stamping_st2_total_count"
+export class FgStationInwardComponent {
+
+
+  title:any = "FG STATION - INWARD"
+  endPoint:string = "fg_stocktable_inward"
   //use the below code if date to be hard coded
   // hourlyBody:any = {date: "2024-07-26"}
   // dayBody:any = {fromDate: '2024-07-24', toDate: '2024-08-02'}

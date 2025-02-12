@@ -10,7 +10,7 @@ import { ChartsTemplateComponent } from '../../../../Components/charts-template/
 })
 export class FinalAssemblyStationComponent {
   title:any = "FINAL ASSEMBLY STATION"
-  endPoint:string = "final_assembly_station"
+  endPoint:string = "final_assembly_traceability"
   //use the below code if date to be hard coded
   // hourlyBody:any = {date: "2024-07-26"}
   // dayBody:any = {fromDate: '2024-07-24', toDate: '2024-08-02'}

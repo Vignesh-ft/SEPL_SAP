@@ -9,15 +9,16 @@ import { ContinuityTestMannualComponent } from "./Individual_Stations/continuity
 import { SpTestAutoComponent } from "./Individual_Stations/sp-test-auto/sp-test-auto.component";
 import { SpTestMannualComponent } from "./Individual_Stations/sp-test-mannual/sp-test-mannual.component";
 import { VarnishStatorAssemblyComponent } from "./Individual_Stations/varnish-stator-assembly/varnish-stator-assembly.component";
-import { FgStationComponent } from "./Individual_Stations/fg-station/fg-station.component";
 import {RotorShaftAssemblyComponent} from "./Individual_Stations/rotor-shaft-assembly/rotor-shaft-assembly.component";
 import { PdiStationComponent } from './Individual_Stations/pdi-station/pdi-station.component';
 import { FinalAssemblyStationComponent } from './Individual_Stations/final-assembly-station/final-assembly-station.component';
+import { FgStationInwardComponent } from "./Individual_Stations/fg-station-inward/fg-station-inward.component";
+import { FgStationOutwardComponent } from "./Individual_Stations/fg-station-outward/fg-station-outward.component";
 
 @Component({
   selector: 'app-stations',
   standalone: true,
-  imports: [CommonModule, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent, SlotPaperInsertionMannualComponent, ContinuityTestAutoComponent, ContinuityTestMannualComponent, SpTestAutoComponent, SpTestMannualComponent, VarnishStatorAssemblyComponent, FgStationComponent, RotorShaftAssemblyComponent, PdiStationComponent, FinalAssemblyStationComponent],
+  imports: [CommonModule, StampingStationAComponent, StampingStationBComponent, SlotPaperInsertionAutoComponent, SlotPaperInsertionMannualComponent, ContinuityTestAutoComponent, ContinuityTestMannualComponent, SpTestAutoComponent, SpTestMannualComponent, VarnishStatorAssemblyComponent, RotorShaftAssemblyComponent, PdiStationComponent, FinalAssemblyStationComponent, FgStationInwardComponent, FgStationOutwardComponent],
   templateUrl: './stations.component.html',
   styleUrl: './stations.component.scss'
 })
@@ -103,7 +104,7 @@ export class StationsComponent {
     {
       order:4,
       isOpen:false,
-      name:"FG STATION",
+      name:"VARNISH STATOR ASSEMBLY",
       isEnable: true,
       isDropDown: false,
       ddOptions: []
@@ -111,7 +112,7 @@ export class StationsComponent {
     {
       order:5,
       isOpen:false,
-      name:"VARNISH STATOR ASSEMBLY",
+      name:"ROTOR SHAFT ASSEMBLY",
       isEnable: true,
       isDropDown: false,
       ddOptions: []
@@ -119,7 +120,7 @@ export class StationsComponent {
     {
       order:6,
       isOpen:false,
-      name:"ROTOR SHAFT ASSEMBLY",
+      name:"FINAL ASSEMBLY STATION",
       isEnable: true,
       isDropDown: false,
       ddOptions: []
@@ -135,11 +136,23 @@ export class StationsComponent {
     {
       order:8,
       isOpen:false,
-      name:"FINAL ASSEMBLY STATION",
+      name:"FG STATION",
       isEnable: true,
-      isDropDown: false,
-      ddOptions: []
+      isDropDown: true,
+      ddOptions: [
+        {
+          order: 0,
+          isOpen: true,
+          name:"INWARD"
+        },
+        {
+          order: 1,
+          isOpen: false,
+          name:"OUTWARD"
+        }
+      ]
     },
+    
   ]
   changeMain(order:any) {
     this.options.map((opt:any) => {

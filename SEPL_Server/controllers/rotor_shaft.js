@@ -61,6 +61,8 @@ const pool = new Pool({
   router.post('/:stationName/hourly', async (req, res) => {
     const { stationName } = req.params; // Extract station name from the route parameter
     const { date } = req.body; // Extract date from the request body
+
+    console.log(`Fetching data for table: ${stationName}`);
   
     // Validate input
     if (!stationName || !date) {
@@ -68,7 +70,8 @@ const pool = new Pool({
     }
   
     // Validate station name to prevent SQL injection
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['rotor_shaft_assembly'];
+   
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -179,7 +182,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
     }
    
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['rotor_shaft_assembly'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -272,7 +275,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name and date are required" });
     }
    
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['rotor_shaft_assembly'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }
@@ -381,7 +384,7 @@ const pool = new Pool({
       return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
     }
   
-    const validStations = ['sp_test_auto', 'sp_test_mannual'];
+    const validStations = ['rotor_shaft_assembly'];
     if (!validStations.includes(stationName)) {
       return res.status(400).json({ message: "Invalid station name" });
     }

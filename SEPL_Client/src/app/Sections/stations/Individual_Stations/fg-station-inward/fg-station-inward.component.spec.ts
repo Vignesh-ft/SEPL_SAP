@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { FgStationComponent } from './fg-station.component';
+import { FgStationInwardComponent } from './fg-station-inward.component';
 
-describe('FgStationComponent', () => {
-  let component: FgStationComponent;
-  let fixture: ComponentFixture<FgStationComponent>;
+describe('FgStationInwardComponent', () => {
+  let component: FgStationInwardComponent;
+  let fixture: ComponentFixture<FgStationInwardComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FgStationComponent]
+      imports: [FgStationInwardComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(FgStationComponent);
+    fixture = TestBed.createComponent(FgStationInwardComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
