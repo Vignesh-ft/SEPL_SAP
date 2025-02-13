@@ -325,21 +325,19 @@ router.post('/:stationName/monthWise', async (req, res) => {
   const { stationName } = req.params;
   const { fromMonth, fromYear, toMonth, toYear } = req.body;
 
-  // Validate input
   if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
     return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
   }
 
-  const validStations = ['fg_packing_station']; 
+  const validStations = ['fg_packing_station'];
   if (!validStations.includes(stationName)) {
     return res.status(400).json({ message: "Invalid station name" });
   }
 
-  // Function to fetch data for the given date range
   const fetchMonthWiseData = async (tableName, fromYear, fromMonth, toYear, toMonth) => {
     const query = `
       SELECT 
-        date, 
+        TO_CHAR(date::date, 'YYYY-MM') AS month,  -- Corrected casting
         ok_count
       FROM ${tableName}
       WHERE date BETWEEN $1 AND $2
@@ -347,36 +345,20 @@ router.post('/:stationName/monthWise', async (req, res) => {
     `;
 
     try {
-      const result = await pool.query(query, [fromYear + '-' + String(fromMonth).padStart(2, '0') + '-01', toYear + '-' + String(toMonth).padStart(2, '0') + '-31']);
+      const result = await pool.query(query, [
+        `${fromYear}-${String(fromMonth).padStart(2, '0')}-01`,
+        `${toYear}-${String(toMonth).padStart(2, '0')}-31`
+      ]);
+
       const data = result.rows;
 
-      // Process the data to get the last ok_count for each month
-      let monthWiseData = [];
-      let currentMonth = null;
-      let lastOkCount = null;
-
-      // Loop through the data and group by month
+      // Store the last ok_count per month
+      let lastCountMap = {};
       for (let row of data) {
-        const rowDate = row.date;
-        const yearMonth = rowDate.substring(0, 7); // Get year and month (YYYY-MM)
-
-        // If we've moved to a new month, store the previous month's data
-        if (currentMonth !== yearMonth) {
-          if (currentMonth !== null) {
-            monthWiseData.push({ month: currentMonth, ok_count: lastOkCount });
-          }
-          currentMonth = yearMonth;
-        }
-        // Always update the last ok_count for the current month
-        lastOkCount = row.ok_count;
+        lastCountMap[row.month] = row.ok_count;
       }
 
-      // If there's still data for the last month, push it to the result
-      if (currentMonth !== null) {
-        monthWiseData.push({ month: currentMonth, ok_count: lastOkCount });
-      }
-
-      return monthWiseData;
+      return lastCountMap;
     } catch (error) {
       console.error("Error fetching month-wise data:", error.message);
       throw error;
@@ -384,40 +366,54 @@ router.post('/:stationName/monthWise', async (req, res) => {
   };
 
   try {
-    const monthWiseData = await fetchMonthWiseData(stationName, fromYear, fromMonth, toYear, toMonth);
-    
-    // Ensure missing months are included with ok_count 0
-    let missingMonths = [];
-    for (let month = fromMonth; month <= toMonth; month++) {
-      const yearMonth = `${fromYear}-${String(month).padStart(2, '0')}`;
-      if (!monthWiseData.some(data => data.month === yearMonth)) {
-        missingMonths.push({ month: yearMonth, ok_count: 0 });
-      }
+    const monthCounts = await fetchMonthWiseData(stationName, fromYear, fromMonth, toYear, toMonth);
+
+    // Generate all months in the given range
+    let start = new Date(fromYear, fromMonth - 1, 1); // Convert to Date object
+    let end = new Date(toYear, toMonth - 1, 1);
+    let months = [];
+
+    while (start <= end) {
+      let year = start.getFullYear();
+      let month = start.getMonth() + 1; // Convert to 1-based index
+      let monthStr = `${year}-${String(month).padStart(2, '0')}`;
+      months.push(monthStr);
+      start.setMonth(start.getMonth() + 1);
     }
 
-    const finalMonthWiseData = [...monthWiseData, ...missingMonths];
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // Ensure all months exist in output (missing months get ok_count = 0)
+    const monthAggregates = months.map(month => ({
+      month,
+      ok_count: monthCounts[month] || 0
+    }));
 
-    // Convert YYYY-MM to "Month Year" format (e.g., "Jan 2025")
-    const monthLabels = finalMonthWiseData.map(item => {
-      const [year, month] = item.month.split('-');
-      return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
+    // Convert YYYY-MM to "MMM YYYY" (e.g., "Jan 2025")
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthLabels = months.map(month => {
+      const [year, monthNum] = month.split('-');
+      return `${monthNames[parseInt(monthNum, 10) - 1]} ${year}`;
     });
 
-    // Return response in the desired template
+    // Return response
     res.json({
       station: stationName,
-      monthLabels: monthLabels,
-      monthSums: finalMonthWiseData.map(item => ({
-        month: monthLabels[finalMonthWiseData.indexOf(item)],
+      fromMonth,
+      fromYear,
+      toMonth,
+      toYear,
+      monthLabels,
+      monthAggregates: monthAggregates.map((item, index) => ({
+        month: monthLabels[index],
         ok_count: item.ok_count
       }))
     });
+
   } catch (error) {
     console.error("Error processing the request:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 
 
 

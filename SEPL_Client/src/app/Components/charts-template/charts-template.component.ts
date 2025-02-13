@@ -353,6 +353,16 @@ export class ChartsTemplateComponent implements OnInit {
         this.dayData1.push(data.ok_count);
       }
 
+      if(data.inward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.inward_count);
+      }
+
+      if(data.outward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.outward_count);
+      }
+
     })
 
     this.hourData = [this.hourData1, this.hourData2]
@@ -406,6 +416,16 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.ok_count !== undefined) {
         this.toolTipLabel.push("Count Sum")
         this.dayData1.push(data.ok_count);
+      }
+
+      if(data.inward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.inward_count);
+      }
+
+      if(data.outward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.outward_count);
       }
 
     })
@@ -464,6 +484,16 @@ export class ChartsTemplateComponent implements OnInit {
         this.dayData1.push(data.ok_count);
       }
 
+      if(data.inward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.inward_count);
+      }
+
+      if(data.outward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.outward_count);
+      }
+
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
@@ -517,6 +547,16 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.ok_count !== undefined) {
         this.toolTipLabel.push("ok count")
         this.dayData1.push(data.ok_count);
+      }
+
+      if(data.inward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.inward_count);
+      }
+
+      if(data.outward_count !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.outward_count);
       }
     })
 
