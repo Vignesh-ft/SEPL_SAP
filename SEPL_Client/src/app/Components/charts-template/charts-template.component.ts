@@ -160,9 +160,10 @@ export class ChartsTemplateComponent implements OnInit {
   ngOnInit(): void {
 
     // console.log("Loader State: ", this.counter, this.loader);
-
+    console.log(this.postData);
+    
     this.sw.fetchChartData(this.stationName,`${this.endPoint}/hourly`, this.postData.hour).subscribe((response:any)=> {
-      // console.log("Hourly Data",response)
+      console.log("Hourly Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Hourly Data Recieved`);
@@ -177,7 +178,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.sw.fetchChartData(this.stationName, `${this.endPoint}/dayWise`, this.postData.day).subscribe((response:any)=> {
-      // console.log("Day Data",response)
+      console.log("Day Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Day Data Recieved`);
@@ -192,7 +193,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.sw.fetchChartData(this.stationName,`${this.endPoint}/shiftWise`, this.postData.shift).subscribe((response:any)=> {
-      // console.log("Shift Data",response)
+      console.log("Shift Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Shift Data Recieved`);
@@ -208,7 +209,7 @@ export class ChartsTemplateComponent implements OnInit {
     })
 
     this.sw.fetchChartData(this.stationName, `${this.endPoint}/monthWise`, this.postData.month).subscribe((response:any)=> {
-      // console.log("Month Data",response)
+      console.log("Month Data",response)
       if(response) {
         this.counter+=1
         console.log(`${response.station} Month Data Recieved`);
@@ -342,6 +343,11 @@ export class ChartsTemplateComponent implements OnInit {
         this.hourData2.push(data.ng_sum);
       }
 
+      if(data.count_sum !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.hourData1.push(data.count_sum);
+      }
+
     })
 
     this.hourData = [this.hourData1, this.hourData2]
@@ -385,6 +391,11 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.ng_sum !== undefined) {
         this.toolTipLabel.push("Ng Count")
         this.dayData2.push(data.ng_sum);
+      }
+
+      if(data.count_sum !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.dayData1.push(data.count_sum);
       }
 
     })
@@ -433,6 +444,11 @@ export class ChartsTemplateComponent implements OnInit {
         this.shiftData2.push(data.ng_sum);
       }
 
+      if(data.count_sum !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.shiftData1.push(data.count_sum);
+      }
+
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
@@ -476,6 +492,11 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.ng_sum !== undefined) {
         this.toolTipLabel.push("Ng Count")
         this.monthData2.push(data.ng_sum);
+      }
+
+      if(data.count_sum !== undefined) {
+        this.toolTipLabel.push("Count Sum")
+        this.monthData1.push(data.count_sum);
       }
     })
 

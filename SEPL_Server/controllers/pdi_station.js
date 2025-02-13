@@ -91,41 +91,30 @@ const pool = new Pool({
 
   //daywise
   const fetchTableForDay = async (stationName, fromDate, toDate) => {
- 
-    // Format the dates for comparison
-    const formatDate = (date) => {
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = (d.getMonth() + 1).toString().padStart(2, '0');
-      const day = d.getDate().toString().padStart(2, '0');
-      return `${year}-${month}-${day}`; // Normalize to YYYY-MM-DD format (no time)
-    };
-   
-   
     const query = `
-      SELECT date, ok_count
+      SELECT date::date AS date, SUM(ok_count::INTEGER) AS ok_count
       FROM ${stationName}
       WHERE date::date BETWEEN $1 AND $2
-      ORDER BY date;
+      GROUP BY date::date
+      ORDER BY date::date;
     `;
-   
+
     try {
-        // Adjust date to handle time zone difference
-        const fromDateAdjusted = new Date(fromDate); // Convert string to Date object
-        fromDateAdjusted.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
-   
-        const toDateAdjusted = new Date(toDate);
-        toDateAdjusted.setUTCHours(23, 59, 59, 999); // Set to the end of the day UTC
-   
-        // Fetch data using the adjusted dates
-        const result = await pool.query(query, [fromDateAdjusted, toDateAdjusted]);
-   
-      return result.rows;
+        const fromDateFormatted = new Date(fromDate).toISOString().split('T')[0];
+        const toDateFormatted = new Date(toDate).toISOString().split('T')[0];
+
+        const result = await pool.query(query, [fromDateFormatted, toDateFormatted]);
+
+        // Ensure ok_count is returned as a proper number
+        return result.rows.map(row => ({
+            date: row.date,
+            ok_count: Number(row.ok_count) // Convert to integer
+        }));
     } catch (error) {
-      console.error(`Error fetching data from table ${stationName}:`, error.message);
-      throw error;
+        console.error(`Error fetching data from table ${stationName}:`, error.message);
+        throw error;
     }
-  };
+};
 
   function dateFilterWithMissingDates(data, fromDate, toDate) {
     const dailySums = {};
@@ -286,15 +275,19 @@ const pool = new Pool({
   
  //monthwise
  const getMonthlyDataForRange = async (stationName, fromMonth, fromYear, toMonth, toYear) => {
-    const query = `
-      SELECT EXTRACT(MONTH FROM date) AS month, EXTRACT(YEAR FROM date) AS year,
-             SUM(ok_count) AS ok_count
-      FROM ${stationName}
-      WHERE (EXTRACT(YEAR FROM date) > $1 OR (EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) >= $2))
-        AND (EXTRACT(YEAR FROM date) < $3 OR (EXTRACT(YEAR FROM date) = $3 AND EXTRACT(MONTH FROM date) <= $4))
-      GROUP BY year, month
-      ORDER BY year, month;
-    `;
+  const query = `
+  SELECT EXTRACT(MONTH FROM date::DATE) AS month, 
+         EXTRACT(YEAR FROM date::DATE) AS year,
+         SUM(ok_count::INTEGER) AS ok_count
+  FROM ${stationName}
+  WHERE (EXTRACT(YEAR FROM date::DATE) > $1 OR 
+        (EXTRACT(YEAR FROM date::DATE) = $1 AND EXTRACT(MONTH FROM date::DATE) >= $2))
+    AND (EXTRACT(YEAR FROM date::DATE) < $3 OR 
+        (EXTRACT(YEAR FROM date::DATE) = $3 AND EXTRACT(MONTH FROM date::DATE) <= $4))
+  GROUP BY year, month
+  ORDER BY year, month;
+`;
+
    
     try {
       // Fetch data for the given range of months and years
