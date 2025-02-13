@@ -2,7 +2,7 @@ const { Pool } = require("pg"); // PostgreSQL package
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
- 
+
 // Database connection configuration for PostgreSQL
 const pool = new Pool({
     user: process.env.DB_USER,       // Database username
@@ -11,386 +11,414 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD, // Database password
     port: process.env.DB_PORT,
     ssl: {
-      rejectUnauthorized: false // Set to true if you have a valid SSL certificate
-    }               // Default PostgreSQL port
-   
-  });
+        rejectUnauthorized: false // Set to true if you have a valid SSL certificate
+    } // Default PostgreSQL port
+});
 
-    const fetchData = async (tableName, date) => {
-    const query = `
-  SELECT
-    date,
-    cycle_time_end,
-    ok_count AS rotor_count -- Alias to match expected property
-    FROM ${tableName}
-    WHERE date = $1
-    ORDER BY cycle_time_end;
-`;
+const fetchData = async (tableName, date, stationName) => {
+  const query = `
+      SELECT 
+          date, 
+          cycle_time_end, 
+          ok_count
+      FROM ${tableName}
+      WHERE date = $1
+      ORDER BY cycle_time_end;
+  `;
 
-    try {
+  try {
       const result = await pool.query(query, [date]);
-      return result.rows; // Return the raw data
-    } catch (error) {
-      console.error("Error fetching data from continuity_test:", error.message);
+      const data = result.rows;
+
+      // Initialize hourlyData with all hours set to 0
+      let hourlyData = [];
+      for (let i = 0; i < 24; i++) {
+          hourlyData.push({ hour: i, ok_count: 0 });
+      }
+
+      // Loop through the data and update the ok_count for each hour
+      for (let row of data) {
+          const cycleTime = new Date(`${row.date}T${row.cycle_time_end}`);
+          const hour = cycleTime.getHours();
+
+          // Update ok_count for the corresponding hour
+          hourlyData[hour].ok_count = row.ok_count;
+      }
+
+      // Hourly labels formatted as "HH:00"
+      const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
+          return String(i).padStart(2, '0') + ":00";
+      });
+
+      // Return the structured response
+      return {
+          stationName: stationName,
+          date: date,
+          hourlyLabels: hourlyLabels,
+          hourlyData: hourlyData
+      };
+
+  } catch (error) {
+      console.error("Error fetching data:", error.message);
       throw error;
-    }
-  };
-
-  //hourly
-  function hourFilterWithMissingHours(data) {
-    const hourlySums = Array.from({ length: 24 }, (_, hour) => ({
-      hour: hour.toString().padStart(2, '0'),
-      ok_sum: 0, // Renamed for ok_count
-    }));
-  
-    data.forEach((datum) => {
-      let hour = datum.cycle_time_end.split(":")[0]; // Extract hour from time
-      let hourIndex = parseInt(hour, 10); // Convert hour to an integer
-  
-      // Update the sums for the respective hour
-      hourlySums[hourIndex].ok_sum += datum.rotor_count || 0; // Use 0 if null
-    });
-  
-    const hourlyLabels = hourlySums.map((entry) => `${entry.hour}:00`);
-    return { hourlyLabels, hourlySums };
-    }
-    
-    router.post('/:stationName/hourly', async (req, res) => {
-        const { stationName } = req.params; // Extract station name from the route parameter
-        const { date } = req.body; // Extract date from the request body
-
-        // Validate input
-        if (!stationName || !date) {
-            return res.status(400).json({ message: "Station name and date are required" });
-        }
-
-        // Validate station name to prevent SQL injection
-        const validStations = ['fg_packing_station'];
-        if (!validStations.includes(stationName)) {
-            return res.status(400).json({ message: "Invalid station name" });
-        }
-
-        try {
-            // Fetch raw data from the specified table
-            const rawData = await fetchData(stationName, date);
-
-            // Process data with the hourFilterWithMissingHours function
-            const { hourlyLabels, hourlySums } = hourFilterWithMissingHours(rawData);
-
-            res.json({
-                station: stationName,
-                date: date,
-                hourlyLabels,
-                hourlySums,
-            });
-        } catch (error) {
-            console.error(`Error in endpoint /${stationName}/hourly:`, error.message);
-            res.status(500).json({ message: "Failed to fetch hourly data", error: error.message });
-        }
-    });
-
-  //daywise
-  const fetchTableForDay = async (stationName, fromDate, toDate) => {
-    const query = `
-      SELECT date::date AS date, SUM(ok_count::INTEGER) AS ok_count
-      FROM ${stationName}
-      WHERE date::date BETWEEN $1 AND $2
-      GROUP BY date::date
-      ORDER BY date::date;
-    `;
-
-    try {
-        const fromDateFormatted = new Date(fromDate).toISOString().split('T')[0];
-        const toDateFormatted = new Date(toDate).toISOString().split('T')[0];
-
-        const result = await pool.query(query, [fromDateFormatted, toDateFormatted]);
-
-        // Ensure ok_count is returned as a proper number
-        return result.rows.map(row => ({
-            date: row.date,
-            ok_count: Number(row.ok_count) // Convert to integer
-        }));
-    } catch (error) {
-        console.error(`Error fetching data from table ${stationName}:`, error.message);
-        throw error;
-    }
+  }
 };
 
-  function dateFilterWithMissingDates(data, fromDate, toDate) {
-    const dailySums = {};
+router.post('/:stationName/hourly', async (req, res) => {
+  const { stationName } = req.params;
+  const { date } = req.body;
 
-    const startDate = new Date(fromDate);
-    const endDate = new Date(toDate);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+  // Validate input
+  if (!stationName || !date) {
+    return res.status(400).json({ message: "Station and date are required" });
+  }
 
-    const formatDate = (date) => date.toISOString().split('T')[0];
+  // Validate station name to prevent SQL injection
+  const validStations = ['fg_packing_station'];  // Add more valid station names if needed
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station" });
+  }
 
-    let currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const formattedDate = formatDate(currentDate);
-        dailySums[formattedDate] = {
-            ok_sum: 0, // Only ok_sum retained
-        };
-        currentDate.setDate(currentDate.getDate() + 1);
+  try {
+    const hourlySums = await fetchData(stationName, date);  // Assuming fetchData returns the hourly data
+
+
+    // If hourlySums is an object with `hourlyData`, access that array
+    const hourlyData = hourlySums.hourlyData || [];
+
+    if (hourlyData.length === 0) {
+      return res.status(404).json({ message: "No data found for the given date" });
     }
 
-    data.forEach((datum) => {
-        const date = formatDate(new Date(datum.date)); // Convert to YYYY-MM-DD format
+    // Prepare hourlyLabels
+    const hourlyLabels = [
+      "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
+      "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", 
+      "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+    ];
 
-        if (dailySums[date]) {
-            dailySums[date].ok_sum += datum.ok_count || 0; // Aggregate `ok_count` as ok_sum
-        }
-    });
-
-    const dailyLabels = Object.keys(dailySums);
-    const dailyAggregates = dailyLabels.map((date) => ({
-        date,
-        ok_sum: dailySums[date].ok_sum,
+    // Initialize the hourlySums structure
+    const formattedHourlySums = hourlyLabels.map(hour => ({
+      hour: hour,  // Maintain the hour label (string format)
+      ok_count: 0  // Initialize with 0
     }));
 
-    return { dailyLabels, dailyAggregates };
-    }
-
-    router.post('/:stationName/dayWise', async (req, res) => {
-        const { stationName } = req.params;
-        const { fromDate, toDate } = req.body;
-
-        if (!stationName || !fromDate || !toDate) {
-            return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
-        }
-
-        const validStations = ['fg_packing_station'];
-        if (!validStations.includes(stationName)) {
-            return res.status(400).json({ message: "Invalid station name" });
-        }
-
-        const addOneDay = (date) => {
-            const d = new Date(date);
-            d.setDate(d.getDate() + 1);
-            return d.toISOString().split('T')[0];
-        };
-
-        try {
-            const data = await fetchTableForDay(stationName, fromDate, toDate);
-
-            const { dailyLabels, dailyAggregates } = dateFilterWithMissingDates(data, fromDate, toDate);
-
-            const updatedFromDate = addOneDay(fromDate);
-            const updatedToDate = addOneDay(toDate);
-            const updatedDailyLabels = dailyLabels.map(date => addOneDay(date));
-            dailyAggregates.forEach((aggregate, index) => {
-                aggregate.date = updatedDailyLabels[index];
-            });
-
-            res.json({
-                station: stationName,
-                fromDate: updatedFromDate,
-                toDate: updatedToDate,
-                dailyLabels: updatedDailyLabels,
-                dailyAggregates,
-            });
-        } catch (error) {
-            console.error(`Error in endpoint /${stationName}/dayWise:`, error.message);
-            res.status(500).json({ message: "Failed to fetch daily grouped data", error: error.message });
-        }
+    // Fill in the count_sum based on hourlyData
+    hourlyData.forEach(data => {
+      const hourIndex = data.hour;  // Assuming `data.hour` is a number from 0-23
+      if (hourIndex >= 0 && hourIndex < 24) {
+        const formattedHour = String(hourIndex).padStart(2, '0');  // Format hour as a 2-digit string
+        formattedHourlySums[hourIndex].hour = formattedHour;  // Update the hour in formattedHourlySums
+        formattedHourlySums[hourIndex].ok_count = data.ok_count;  // Assign ok_count to the corresponding hour
+      }
     });
 
-    //shiftwise
-  const getData = async (stationName, date) => {
+    // Format the response
+    const responseData = {
+      station: stationName,
+      date: date,
+      hourlyLabels: hourlyLabels,
+      hourlySums: formattedHourlySums
+    };
+
+    res.json(responseData);
+
+  } catch (error) {
+    console.error("Error processing the request:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+//daywise report
+
+
+router.post('/:stationName/dayWise', async (req, res) => {
+  const { stationName } = req.params;
+  const { fromDate, toDate } = req.body;
+
+  // Validate input
+  if (!stationName || !fromDate || !toDate) {
+    return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
+  }
+
+  const validStations = ['fg_packing_station']; 
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station name" });
+  }
+
+  const fetchDayWiseData = async (stationName, fromDate, toDate) => {
     const query = `
-      SELECT shift, ok_count AS stator_count
+      SELECT 
+        date, 
+        ok_count
       FROM ${stationName}
-      WHERE date::date = $1;
+      WHERE date BETWEEN $1 AND $2
+      ORDER BY date, cycle_time_end;
     `;
+    
+    try {
+      const result = await pool.query(query, [fromDate, toDate]);
+      const data = result.rows;
+  
+      let dayWiseData = [];
+      let currentDate = null;
+      let lastOkCount = null;
+  
+      // Loop through the data to store the last ok_count for each day
+      for (let row of data) {
+        const rowDate = row.date;
+  
+        if (currentDate !== rowDate) {
+          if (currentDate !== null) {
+            dayWiseData.push({ date: currentDate, ok_count: lastOkCount });
+          }
+          currentDate = rowDate;
+        }
+  
+        lastOkCount = row.ok_count;
+      }
+  
+      // Add the last day's data if available
+      if (currentDate !== null) {
+        dayWiseData.push({ date: currentDate, ok_count: lastOkCount });
+      }
+  
+      // Handle missing dates
+      let startDate = new Date(fromDate);
+      let endDate = new Date(toDate);
+      let missingDates = [];
+  
+      while (startDate <= endDate) {
+        const formattedDate = startDate.toISOString().split('T')[0]; // Format as yyyy-mm-dd
+  
+        if (!dayWiseData.some(data => data.date === formattedDate)) {
+          missingDates.push({ date: formattedDate, ok_count: 0 });
+        }
+  
+        startDate.setDate(startDate.getDate() + 1);
+      }
+  
+      // Combine existing data with missing dates and sort by date
+      dayWiseData = [...dayWiseData, ...missingDates];
+      dayWiseData.sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+      // Create daily labels (formatted as yyyy-mm-dd)
+      let dailyLabels = [];
+      startDate = new Date(fromDate);
+      while (startDate <= endDate) {
+        const formattedDate = startDate.toISOString().split('T')[0]; // Format as yyyy-mm-dd
+        dailyLabels.push(formattedDate);
+        startDate.setDate(startDate.getDate() + 1);
+      }
+  
+      // Return the structured response
+      return {
+        station: stationName,
+        fromDate: fromDate,
+        toDate: toDate,
+        dailyLabels: dailyLabels,
+        dailyAggregates: dayWiseData
+      };
+  
+    } catch (error) {
+      console.error("Error fetching day-wise data:", error.message);
+      throw error;
+    }
+  };
+  
+
+  try {
+    const dayWiseData = await fetchDayWiseData(stationName, fromDate, toDate);
+    if (dayWiseData.length === 0) {
+      return res.status(404).json({ message: "No data found for the given date range" });
+    }
+    res.json(dayWiseData);
+  } catch (error) {
+    console.error("Error processing the request:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+// Shift-wise report
+router.post('/:stationName/shiftWise', async (req, res) => {
+  const { stationName } = req.params;
+  const { date } = req.body;
+
+  // Validate input
+  if (!stationName || !date) {
+    return res.status(400).json({ message: "Station name and date are required" });
+  }
+
+  const validStations = ['fg_packing_station']; 
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station name" });
+  }
+
+  // Fetch the data for the given date
+  const fetchShiftWiseData = async (tableName, date) => {
+    const query = `
+      SELECT 
+        date, 
+        shift, 
+        ok_count
+      FROM ${tableName}
+      WHERE date = $1
+      ORDER BY shift, cycle_time_end;
+    `;
+
     try {
       const result = await pool.query(query, [date]);
-    //   console.log("Query Result:", result.rows); // Add this log
-      return result.rows;
-    } catch (error) {
-      console.error(`Error fetching data for ${stationName} on ${date}:`, error.message);
-      throw error;
-    }
-  };
-   
-  const sumCountsByShift = (data) => {
-    // Initialize counts for each shift with default values
-    const shiftCounts = {
-      A: { ok_sum: 0 },
-      B: { ok_sum: 0 },
-      C: { ok_sum: 0 },
-    };
-  
-    // If there is data, sum the counts for each shift
-    if (data.length > 0) {
-      data.forEach((row) => {
-        const { shift, stator_count = 0 } = row; // Only using stator_count for ok_sum
-        if (shiftCounts[shift]) {
-          shiftCounts[shift].ok_sum += stator_count;
-        }
-      });
-    }
-  
-    // Convert the object to an array for the response
-    return Object.keys(shiftCounts).map((shift) => ({
-      shift,
-      ok_sum: shiftCounts[shift].ok_sum ?? 0, // Default to 0 if null
-    }));
-  };
-  
-  router.post('/:stationName/shiftWise', async (req, res) => {
-    const { stationName } = req.params;
-    const { date } = req.body;
-  
-    if (!stationName || !date) {
-      return res.status(400).json({ message: "Station name and date are required" });
-    }
-  
-    const validStations = ['fg_packing_station'];
-    if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station name" });
-    }
-  
-    try {
-      // Step 1: Fetch the data for the given date
-      const data = await getData(stationName, date);
-  
-      const shiftLabels = [`${date} Shift A`, `${date} Shift B`, `${date} Shift C`];
-  
-      // Step 2: Group the data by shift and sum the counts
-      const shiftSums = sumCountsByShift(data);
-  
-      // Step 3: Send the response with the summed counts for each shift
-      res.json({
-        station: stationName,
-        date,
-        shiftLabels,
-        shiftSums, // Returns stator counts for each shift (A, B, C)
-      });
-    } catch (error) {
-      console.error(`Error in endpoint /${stationName}/shiftWise:`, error.message);
-      res.status(500).json({ message: "Failed to fetch data", error: error.message });
-    }
-  });
-  
- //monthwise
- const getMonthlyDataForRange = async (stationName, fromMonth, fromYear, toMonth, toYear) => {
-  const query = `
-  SELECT EXTRACT(MONTH FROM date::DATE) AS month, 
-         EXTRACT(YEAR FROM date::DATE) AS year,
-         SUM(ok_count::INTEGER) AS ok_count
-  FROM ${stationName}
-  WHERE (EXTRACT(YEAR FROM date::DATE) > $1 OR 
-        (EXTRACT(YEAR FROM date::DATE) = $1 AND EXTRACT(MONTH FROM date::DATE) >= $2))
-    AND (EXTRACT(YEAR FROM date::DATE) < $3 OR 
-        (EXTRACT(YEAR FROM date::DATE) = $3 AND EXTRACT(MONTH FROM date::DATE) <= $4))
-  GROUP BY year, month
-  ORDER BY year, month;
-`;
+      const data = result.rows;
 
-   
-    try {
-      // Fetch data for the given range of months and years
-      
-      const result = await pool.query(query, [fromYear, fromMonth, toYear, toMonth]);
-         
-      return result.rows; // Returns an array of objects with year, month, rotor_count, stator_count
+
+      // Initialize shiftWiseData with all shifts set to 0
+      let shiftWiseData = [
+        { shift: 'A', ok_count: 0 },
+        { shift: 'B', ok_count: 0 },
+        { shift: 'C', ok_count: 0 }
+      ];
+
+      // Loop through the data and update the ok_count for each shift
+      for (let row of data) {
+        const shift = row.shift;
+
+        // Update ok_count for the corresponding shift
+        if (shift === 'A') {
+          shiftWiseData[0].ok_count = row.ok_count;
+        } else if (shift === 'B') {
+          shiftWiseData[1].ok_count = row.ok_count;
+        } else if (shift === 'C') {
+          shiftWiseData[2].ok_count = row.ok_count;
+        }
+      }
+
+      return shiftWiseData;
+
     } catch (error) {
-      console.error(`Error fetching monthly data for ${stationName}:`, error.message);
+      console.error("Error fetching shift-wise data:", error.message);
       throw error;
     }
   };
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-   
-  const getMonthName = (monthIndex) => {
-    return monthNames[monthIndex - 1]; // Convert 1-based month to 0-based index
-  };
-   
-  const aggregateMonthlyDataForRange = (data, fromMonth, fromYear, toMonth, toYear) => {
-    const monthlyData = [];
-    let currentYear = fromYear;
-    let currentMonth = fromMonth;
-  
-    // Create an empty array for each month in the given range
-    while (
-      currentYear < toYear ||
-      (currentYear === toYear && currentMonth <= toMonth)
-    ) {
-      monthlyData.push({
-        year: currentYear,
-        month: currentMonth,
-        ok_count: 0,
-      });
-  
-      currentMonth++;
-      if (currentMonth > 12) {
-        currentMonth = 1;
-        currentYear++;
-      }
+
+  try {
+    const shiftWiseData = await fetchShiftWiseData(stationName, date);
+    if (shiftWiseData.length === 0) {
+      return res.status(404).json({ message: "No data found for the given date" });
     }
-  
-    // Aggregate data for each month
-    data.forEach(row => {
-      const monthIndex = (row.year - fromYear) * 12 + (row.month - fromMonth);
-      if (monthIndex >= 0 && monthIndex < monthlyData.length) {
-        // Convert count to a number to avoid issues with string aggregation
-        monthlyData[monthIndex].ok_count += parseInt(row.ok_count) || 0;
-      }
+
+    const shiftLabels = [`${date} Shift A`, `${date} Shift B`, `${date} Shift C`];
+    res.json({
+      station: stationName,
+      date: date,
+      shiftLabels: shiftLabels,
+      shiftSums: shiftWiseData
     });
-  
-    // Return the formatted response with month names
-    return monthlyData.map(monthData => ({
-      month: getMonthName(monthData.month), // Convert month number to name
-      year: monthData.year, // Year (e.g., 2024)
-      ok_sum: monthData.ok_count,
-    }));
-  };
-  
-  router.post('/:stationName/monthWise', async (req, res) => {
-    const { stationName } = req.params;
-    const { fromMonth, fromYear, toMonth, toYear } = req.body;
-  
-    if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
-      return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
-    }
-  
-    const validStations = ['fg_packing_station'];
-    if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station name" });
-    }
-  
-    if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
-      return res.status(400).json({ message: "Invalid month. Please provide a month between 1 and 12." });
-    }
-  
-    if (fromYear > toYear || (fromYear === toYear && fromMonth > toMonth)) {
-      return res.status(400).json({ message: "From date must be earlier than to date" });
-    }
-  
+  } catch (error) {
+    console.error("Error processing the request:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.post('/:stationName/monthWise', async (req, res) => {
+  const { stationName } = req.params;
+  const { fromMonth, fromYear, toMonth, toYear } = req.body;
+
+  // Validate input
+  if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
+    return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
+  }
+
+  const validStations = ['fg_packing_station']; 
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station name" });
+  }
+
+  // Function to fetch data for the given date range
+  const fetchMonthWiseData = async (tableName, fromYear, fromMonth, toYear, toMonth) => {
+    const query = `
+      SELECT 
+        date, 
+        ok_count
+      FROM ${tableName}
+      WHERE date BETWEEN $1 AND $2
+      ORDER BY date;
+    `;
+
     try {
-      const data = await getMonthlyDataForRange(stationName, fromMonth, fromYear, toMonth, toYear);
-      const aggregatedData = aggregateMonthlyDataForRange(data, fromMonth, fromYear, toMonth, toYear);
-  
-      const formattedResponse = aggregatedData.map(monthData => ({
-        month: `${monthData.month} ${monthData.year}`,
-        ok_sum: monthData.ok_sum,
-      }));
-  
-      const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`);
-  
-      res.json({
-        station: stationName,
-        monthLabels,
-        monthSums: formattedResponse
-      });
+      const result = await pool.query(query, [fromYear + '-' + String(fromMonth).padStart(2, '0') + '-01', toYear + '-' + String(toMonth).padStart(2, '0') + '-31']);
+      const data = result.rows;
+
+      // Process the data to get the last ok_count for each month
+      let monthWiseData = [];
+      let currentMonth = null;
+      let lastOkCount = null;
+
+      // Loop through the data and group by month
+      for (let row of data) {
+        const rowDate = row.date;
+        const yearMonth = rowDate.substring(0, 7); // Get year and month (YYYY-MM)
+
+        // If we've moved to a new month, store the previous month's data
+        if (currentMonth !== yearMonth) {
+          if (currentMonth !== null) {
+            monthWiseData.push({ month: currentMonth, ok_count: lastOkCount });
+          }
+          currentMonth = yearMonth;
+        }
+        // Always update the last ok_count for the current month
+        lastOkCount = row.ok_count;
+      }
+
+      // If there's still data for the last month, push it to the result
+      if (currentMonth !== null) {
+        monthWiseData.push({ month: currentMonth, ok_count: lastOkCount });
+      }
+
+      return monthWiseData;
     } catch (error) {
-      console.error(`Error in endpoint /${stationName}/monthWise:`, error.message);
-      res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
+      console.error("Error fetching month-wise data:", error.message);
+      throw error;
     }
-  });
+  };
+
+  try {
+    const monthWiseData = await fetchMonthWiseData(stationName, fromYear, fromMonth, toYear, toMonth);
+    
+    // Ensure missing months are included with ok_count 0
+    let missingMonths = [];
+    for (let month = fromMonth; month <= toMonth; month++) {
+      const yearMonth = `${fromYear}-${String(month).padStart(2, '0')}`;
+      if (!monthWiseData.some(data => data.month === yearMonth)) {
+        missingMonths.push({ month: yearMonth, ok_count: 0 });
+      }
+    }
+
+    const finalMonthWiseData = [...monthWiseData, ...missingMonths];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Convert YYYY-MM to "Month Year" format (e.g., "Jan 2025")
+    const monthLabels = finalMonthWiseData.map(item => {
+      const [year, month] = item.month.split('-');
+      return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
+    });
+
+    // Return response in the desired template
+    res.json({
+      station: stationName,
+      monthLabels: monthLabels,
+      monthSums: finalMonthWiseData.map(item => ({
+        month: monthLabels[finalMonthWiseData.indexOf(item)],
+        ok_count: item.ok_count
+      }))
+    });
+  } catch (error) {
+    console.error("Error processing the request:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 
 
 module.exports = router;

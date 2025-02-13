@@ -2,7 +2,7 @@ const { Pool } = require("pg"); // PostgreSQL package
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
- 
+
 // Database connection configuration for PostgreSQL
 const pool = new Pool({
     user: process.env.DB_USER,       // Database username
@@ -11,406 +11,410 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD, // Database password
     port: process.env.DB_PORT,
     ssl: {
-      rejectUnauthorized: false // Set to true if you have a valid SSL certificate
-    }               // Default PostgreSQL port
-   
-  });
+        rejectUnauthorized: false // Set to true if you have a valid SSL certificate
+    } // Default PostgreSQL port
+});
 
-  const fetchData = async (tableName, date) => {
-    const query = `
-    SELECT
-        outward_date,
-        outward_time,
-        SUM(outward_count) AS count_sum  -- Sum outward_count per hour
-    FROM ${tableName}
-    WHERE outward_date = $1
-    GROUP BY outward_date, outward_time
-    ORDER BY outward_time;
-    `;
 
-    try {
-        const result = await pool.query(query, [date]);
-        return result.rows;
-    } catch (error) {
-        console.error(`Error fetching data from ${tableName}:`, error.message);
-        throw error;
-    }
+const fetchData = async (tableName, date, stationName) => {
+  const query = `
+      SELECT 
+          outward_date, 
+          outward_time, 
+          outward_count 
+      FROM ${tableName}
+      WHERE outward_date = $1
+      ORDER BY outward_time;
+  `;
+
+  try {
+      const result = await pool.query(query, [date]);
+      const data = result.rows;
+
+      
+      // Initialize hourlyData with all hours set to 0
+      let hourlyData = [];
+      for (let i = 0; i < 24; i++) {
+          hourlyData.push({ hour: i, outward_count: 0 });
+      }
+
+      // Loop through the data and update outward_count for each hour (store last value)
+      for (let row of data) {
+          const fullDate = new Date(row.outward_date);
+          const fullDateTime = new Date(`${fullDate.toISOString().split('T')[0]}T${row.outward_time}`);
+
+          const hour = fullDateTime.getHours();
+
+          // Ensure the hour is valid
+          if (hour >= 0 && hour < 24) {
+              hourlyData[hour].outward_count = row.outward_count;  // Replace previous value with the latest one
+          } else {
+              console.error("Invalid hour:", hour);
+          }
+      }
+
+      // Hourly labels formatted as "HH:00"
+      const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
+          return String(i).padStart(2, '0') + ":00";
+      });
+
+      // Return the structured response
+      return {
+          stationName: stationName,
+          date: date,
+          hourlyLabels: hourlyLabels,
+          hourlyData: hourlyData
+      };
+
+  } catch (error) {
+      console.error("Error fetching data:", error.message);
+      throw error;
+  }
 };
 
-
-// Hourly aggregation with missing hours handled
-function hourFilterWithMissingHours(data) {
-    const hourlySums = Array.from({ length: 24 }, (_, hour) => ({
-        hour: hour.toString().padStart(2, '0'),
-        count_sum: 0, // Initialize count
-    }));
-
-    data.forEach((datum) => {
-        let hour = datum.outward_time.split(":")[0]; // Extract hour from time
-        let hourIndex = parseInt(hour, 10); // Convert to integer
-
-        // Update the counts for the respective hour
-        hourlySums[hourIndex].count_sum += parseInt(datum.count_sum, 10) || 0;
-    });
-
-    const hourlyLabels = hourlySums.map((entry) => `${entry.hour}:00`);
-    return { hourlyLabels, hourlySums };
-}
 
 router.post('/:stationName/hourly', async (req, res) => {
-    const { stationName } = req.params;
-    const { date } = req.body;
+  const { stationName } = req.params;
+  const { date } = req.body;
 
-    // Validate input
-    if (!stationName || !date) {
-        return res.status(400).json({ message: "Station name and date are required" });
-    }
-
-    // Validate station name to prevent SQL injection
-    const validStations = ['fg_stocktable_outward'];
-    if (!validStations.includes(stationName)) {
-        return res.status(400).json({ message: "Invalid station name" });
-    }
-
-    try {
-        // Fetch raw data
-        const rawData = await fetchData(stationName, date);
-
-        // Process data with the function
-        const { hourlyLabels, hourlySums } = hourFilterWithMissingHours(rawData);
-
-        res.json({
-            station: stationName,
-            date: date,
-            hourlyLabels,
-            hourlySums,
-        });
-    } catch (error) {
-        console.error(`Error in endpoint /${stationName}/hourly:`, error.message);
-        res.status(500).json({ message: "Failed to fetch hourly data", error: error.message });
-    }
-});
-
-
-  //daywise
-  const fetchTableForDay = async (stationName, fromDate, toDate) => {
-    const query = `
-      SELECT outward_date::date AS outward_date, SUM(outward_count) AS count_sum
-      FROM ${stationName}
-      WHERE outward_date::date BETWEEN $1 AND $2
-      GROUP BY outward_date::date
-      ORDER BY outward_date::date;
-    `;
-
-    try {
-        // Convert input dates to correct format (YYYY-MM-DD)
-        const fromDateFormatted = new Date(fromDate).toISOString().split('T')[0];
-        const toDateFormatted = new Date(toDate).toISOString().split('T')[0];
-
-        // Fetch the aggregated results
-        const result = await pool.query(query, [fromDateFormatted, toDateFormatted]);
-
-        return result.rows.map(row => ({
-            outward_date: row.outward_date, 
-            count_sum: Number(row.count_sum) || 0 // Sum of inward_count
-        }));
-    } catch (error) {
-        console.error(`Error fetching data from table ${stationName}:`, error.message);
-        throw error;
-    }
-};
-
-
-// Function to aggregate daily data
-function dateFilterWithMissingDates(data, fromDate, toDate) {
-  const dailySums = {};
-
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  startDate.setHours(0, 0, 0, 0);
-  endDate.setHours(23, 59, 59, 999);
-
-  const formatDate = (date) => date.toISOString().split('T')[0]; // Format to YYYY-MM-DD
-
-  // Initialize daily sums for each day within the date range
-  let currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-      const formattedDate = formatDate(currentDate);
-      dailySums[formattedDate] = {
-          count_sum: 0, // Aggregated count
-      };
-      currentDate.setDate(currentDate.getDate() + 1);
+  // Validate input
+  if (!stationName || !date) {
+    return res.status(400).json({ message: "Station and date are required" });
   }
 
-  // Aggregate the data
-  data.forEach((datum) => {
-      const date = formatDate(new Date(datum.outward_date)); // Format inward_date as YYYY-MM-DD
-
-      if (dailySums[date]) {
-          dailySums[date].count_sum += datum.count_sum || 0; // Add inward_count to the sum
-      }
-  });
-
-  // Prepare the dailyLabels and dailyAggregates
-  const dailyLabels = Object.keys(dailySums);
-  const dailyAggregates = dailyLabels.map((date) => ({
-      date,
-      count_sum: dailySums[date].count_sum, // The aggregated count for the day
-  }));
-
-  return { dailyLabels, dailyAggregates };
-}
-
-// Example usage
-router.post('/:stationName/dayWise', async (req, res) => {
-    const { stationName } = req.params;
-    const { fromDate, toDate } = req.body;
-
-    // Validate input
-    if (!stationName || !fromDate || !toDate) {
-        return res.status(400).json({ message: "Station name, fromDate, and toDate are required" });
-    }
-
-    // Validate station name to prevent SQL injection
-    const validStations = ['fg_stocktable_outward'];
-    if (!validStations.includes(stationName)) {
-        return res.status(400).json({ message: "Invalid station name" });
-    }
-
-    
-    const addOneDay = (date) => {
-      const d = new Date(date);
-      d.setDate(d.getDate() + 1);
-      return d.toISOString().split('T')[0];
-    };
-    try {
-      const data = await fetchTableForDay(stationName, fromDate, toDate);
-
-      const { dailyLabels, dailyAggregates } = dateFilterWithMissingDates(data, fromDate, toDate);
-
-      const updatedFromDate = addOneDay(fromDate);
-      const updatedToDate = addOneDay(toDate);
-      const updatedDailyLabels = dailyLabels.map(date => addOneDay(date));
-      dailyAggregates.forEach((aggregate, index) => {
-          aggregate.date = updatedDailyLabels[index];
-      });
-
-      res.json({
-          station: stationName,
-          fromDate: updatedFromDate,
-          toDate: updatedToDate,
-          dailyLabels: updatedDailyLabels,
-          dailyAggregates,
-      });
-  } catch (error) {
-      console.error(`Error in endpoint /${stationName}/dayWise:`, error.message);
-      res.status(500).json({ message: "Failed to fetch daily grouped data", error: error.message });
+  // Validate station name to prevent SQL injection
+  const validStations = ['fg_stocktable_outward'];  // Add more valid station names if needed
+  if (!validStations.includes(stationName)) {
+    return res.status(400).json({ message: "Invalid station" });
   }
-});
-// Get data for the given station and date
-const getData = async (stationName, date) => {
-  const query = `
-    SELECT shift, SUM(outward_count) AS count_sum  -- Sum outward_count for each shift
-    FROM ${stationName}
-    WHERE outward_date::date = $1  -- Use outward_date for filtering
-    GROUP BY shift;  -- Group by shift
-  `;
+
   try {
-    const result = await pool.query(query, [date]);
-    return result.rows;  // Return the data
+    const hourlySums = await fetchData(stationName, date); 
+
+    // If hourlySums is an object with `hourlyData`, access that array
+    const hourlyData = hourlySums.hourlyData || [];
+
+    if (hourlyData.length === 0) {
+      return res.status(404).json({ message: "No data found for the given date" });
+    }
+
+    // Prepare hourlyLabels
+    const hourlyLabels = [
+      "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
+      "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", 
+      "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+    ];
+
+    // Initialize the hourlySums structure
+    const formattedHourlySums = hourlyLabels.map(hour => ({
+      hour: hour,  // Maintain the hour label (string format)
+      outward_count: 0  // Initialize with 0
+    }));
+
+    // Fill in the count_sum based on hourlyData
+    hourlyData.forEach(data => {
+      const hourIndex = data.hour;  // Assuming `data.hour` is a number from 0-23
+      if (hourIndex >= 0 && hourIndex < 24) {
+        const formattedHour = String(hourIndex).padStart(2, '0');  // Format hour as a 2-digit string
+        formattedHourlySums[hourIndex].hour = formattedHour;  // Update the hour in formattedHourlySums
+        formattedHourlySums[hourIndex].outward_count = data.outward_count;  // Assign ok_count to the corresponding hour
+      }
+    });
+
+    // Format the response
+    const responseData = {
+      station: stationName,
+      date: date,
+      hourlyLabels: hourlyLabels,
+      hourlySums: formattedHourlySums
+    };
+
+    res.json(responseData);
+
   } catch (error) {
-    console.error(`Error fetching data for ${stationName} on ${date}:`, error.message);
-    throw error;
+    console.error("Error processing the request:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
+  const query = `
+      SELECT 
+          outward_date, 
+          outward_time, 
+          outward_count 
+      FROM ${tableName}
+      WHERE outward_date BETWEEN $1 AND $2
+      ORDER BY outward_date, outward_time;
+  `;
+
+  try {
+      const result = await pool.query(query, [fromDate, toDate]);
+      const data = result.rows;
+
+
+      // Generate a list of all dates between fromDate and toDate
+      const start = new Date(fromDate);
+      const end = new Date(toDate);
+      let dateRange = [];
+
+      while (start <= end) {
+          let nextDay = new Date(start);
+          nextDay.setDate(nextDay.getDate() + 1); // Increment the date by 1
+          dateRange.push(nextDay.toISOString().split("T")[0]); // Format as YYYY-MM-DD
+          start.setDate(start.getDate() + 1);
+      }
+
+      // Initialize dailyAggregates with all dates set to 0
+      let dailyAggregates = dateRange.map(date => ({ date, outward_count: 0 }));
+
+      // Track last outward_count for each date
+      let lastCountMap = {};
+
+      for (let row of data) {
+          let date = new Date(row.outward_date);
+          date.setDate(date.getDate() + 1); // Increment the date by 1
+          const formattedDate = date.toISOString().split("T")[0]; // Extract YYYY-MM-DD
+
+          // Always store the last outward_count for each date
+          lastCountMap[formattedDate] = row.outward_count;
+      }
+
+      // Populate dailyAggregates with actual values
+      dailyAggregates = dailyAggregates.map(item => ({
+          date: item.date,
+          outward_count: lastCountMap[item.date] || 0 // Default to 0 if no data
+      }));
+
+      // Return the structured response
+      return {
+          station: stationName,
+          fromDate: fromDate,
+          toDate: toDate,
+          dailyLabels: dateRange,
+          dailyAggregates: dailyAggregates
+      };
+
+  } catch (error) {
+      console.error("Error fetching data:", error.message);
+      throw error;
   }
 };
 
-// Sum inward_count by shift for shift-wise aggregation
-const sumCountsByShift = (data) => {
-  // Initialize counts for each shift with default values
-  const shiftCounts = {
-      A: { count_sum: 0 },
-      B: { count_sum: 0 },
-      C: { count_sum: 0 },
-  };
+router.post('/:stationName/dayWise', async (req, res) => {
+  const { stationName } = req.params;
+  const { fromDate, toDate } = req.body;
 
-  // Sum the inward_count for each shift
-  if (data.length > 0) {
-      data.forEach((row) => {
-          const { shift, count_sum = 0 } = row;  // Use count_sum as the aggregated count
-          if (shiftCounts[shift]) {
-              shiftCounts[shift].count_sum += count_sum;
+  // Validate input
+  if (!stationName || !fromDate || !toDate) {
+      return res.status(400).json({ message: "Station, fromDate, and toDate are required" });
+  }
+
+  // Validate station name to prevent SQL injection
+  const validStations = ['fg_stocktable_outward']; // Add more valid station names if needed
+  if (!validStations.includes(stationName)) {
+      return res.status(400).json({ message: "Invalid station" });
+  }
+
+  try {
+      const dailyData = await fetchDayWiseData(stationName, fromDate, toDate, stationName);
+
+
+      res.json(dailyData);
+
+  } catch (error) {
+      console.error("Error processing the request:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+const fetchShiftWiseData = async (tableName, selectedDate, stationName) => {
+  const query = `
+      SELECT 
+          outward_date, 
+          outward_time, 
+          outward_count 
+      FROM ${tableName}
+      WHERE outward_date = $1
+      ORDER BY outward_date, outward_time;
+  `;
+
+  try {
+      const result = await pool.query(query, [selectedDate]);
+      const data = result.rows;
+
+
+      // Define shifts with the new naming convention
+      const shifts = [
+          { name: "Shift A", start: "06:00:00", end: "13:59:59" },
+          { name: "Shift B", start: "14:00:00", end: "21:59:59" },
+          { name: "Shift C", start: "22:00:00", end: "05:59:59" } // Next day early morning
+      ];
+
+      // Initialize shift-wise data with default 0
+      let shiftData = {
+          "Shift A": 0,
+          "Shift B": 0,
+          "Shift C": 0
+      };
+
+      // Track last outward_count for each shift
+      let lastCountMap = {};
+
+      for (let row of data) {
+          const time = row.outward_time;
+          const outwardCount = row.outward_count;
+
+          // Determine which shift the record belongs to
+          for (let shift of shifts) {
+              if (
+                  (shift.name !== "Shift C" && time >= shift.start && time <= shift.end) ||
+                  (shift.name === "Shift C" && (time >= "22:00:00" || time <= "05:59:59"))
+              ) {
+                  lastCountMap[shift.name] = outwardCount; // Store last count for shift
+              }
           }
-      });
-  }
+      }
 
-  // Return the shift-wise aggregated sums
-  return Object.keys(shiftCounts).map((shift) => ({
-      shift,
-      count_sum: shiftCounts[shift].count_sum ?? 0,  // Default to 0 if count_sum is null
-  }));
+      // Populate shift-wise aggregates
+      shifts.forEach(shift => {
+          shiftData[shift.name] = lastCountMap[shift.name] || 0; // Default to 0 if no data
+      });
+
+      // Return structured response
+      return {
+          station: stationName,
+          date: selectedDate,
+          shiftLabels: ["Shift A", "Shift B", "Shift C"],
+          shiftAggregates: [
+              { shift: "Shift A", ok_count: shiftData["Shift A"] },
+              { shift: "Shift B", ok_count: shiftData["Shift B"] },
+              { shift: "Shift C", ok_count: shiftData["Shift C"] }
+          ]
+      };
+
+  } catch (error) {
+      console.error("Error fetching shift-wise data:", error.message);
+      throw error;
+  }
 };
 
-// API endpoint to fetch shift-wise data
+// Express Route
 router.post('/:stationName/shiftWise', async (req, res) => {
   const { stationName } = req.params;
   const { date } = req.body;
 
-  // Validate the input
+  // Validate input
   if (!stationName || !date) {
-      return res.status(400).json({ message: "Station name and date are required" });
+      return res.status(400).json({ message: "Station and date are required" });
   }
 
-  const validStations = ['fg_stocktable_outward'];  // List of valid stations
+  // Validate station name to prevent SQL injection
+  const validStations = ['fg_stocktable_outward']; // Add more valid station names if needed
   if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station name" });
+      return res.status(400).json({ message: "Invalid station" });
   }
 
   try {
-      // Step 1: Fetch the data for the given date
-      const data = await getData(stationName, date);
-
-      const shiftLabels = [`${date} Shift A`, `${date} Shift B`, `${date} Shift C`];
-
-      // Step 2: Group the data by shift and sum the counts
-      const shiftSums = sumCountsByShift(data);
-
-      // Step 3: Send the response with the summed counts for each shift
-      res.json({
-          station: stationName,
-          date,
-          shiftLabels,
-          shiftSums,  // Return inward counts for each shift (A, B, C)
-      });
+      const shiftData = await fetchShiftWiseData(stationName, date, stationName);
+      res.json(shiftData);
   } catch (error) {
-      console.error(`Error in endpoint /${stationName}/shiftWise:`, error.message);
-      res.status(500).json({ message: "Failed to fetch data", error: error.message });
+      console.error("Error processing shift-wise request:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
   }
 });
-// Get data for the given station and date range
-const getMonthlyDataForRange = async (stationName, fromMonth, fromYear, toMonth, toYear) => {
+const fetchMonthWiseData = async (tableName, fromMonth, fromYear, toMonth, toYear, stationName) => {
   const query = `
-    SELECT EXTRACT(MONTH FROM outward_date) AS month, EXTRACT(YEAR FROM outward_date) AS year,
-           SUM(outward_count) AS count_sum  -- Sum outward_count for each month
-    FROM ${stationName}
-    WHERE (EXTRACT(YEAR FROM outward_date) > $1 OR (EXTRACT(YEAR FROM outward_date) = $1 AND EXTRACT(MONTH FROM outward_date) >= $2))
-      AND (EXTRACT(YEAR FROM outward_date) < $3 OR (EXTRACT(YEAR FROM outward_date) = $3 AND EXTRACT(MONTH FROM outward_date) <= $4))
-    GROUP BY year, month
-    ORDER BY year, month;
+      SELECT 
+          outward_date, 
+          outward_count
+      FROM ${tableName}
+      WHERE 
+          EXTRACT(YEAR FROM outward_date) BETWEEN $1 AND $2
+      ORDER BY outward_date;
   `;
 
   try {
-    // Fetch data for the given range of months and years
-    const result = await pool.query(query, [fromYear, fromMonth, toYear, toMonth]);
-    return result.rows;  // Returns an array of objects with year, month, and count_sum
+      const result = await pool.query(query, [fromYear, toYear]);
+      const data = result.rows;
+
+      // Generate all months in the range
+      let start = new Date(fromYear, fromMonth - 1, 1); // Month index starts from 0
+      let end = new Date(toYear, toMonth, 0); // Last day of the last month
+      let months = [];
+
+      while (start <= end) {
+          let year = start.getFullYear();
+          let monthName = start.toLocaleString("en-US", { month: "short" }); // Convert to "Jan", "Feb"
+          months.push(`${monthName} ${year}`);
+          start.setMonth(start.getMonth() + 1);
+      }
+
+      // Initialize monthly data with default 0
+      let monthData = {};
+      months.forEach(month => {
+          monthData[month] = 0;
+      });
+
+      // Track last outward_count per month
+      let lastCountMap = {};
+
+      for (let row of data) {
+          let outwardDate = new Date(row.outward_date);
+          let monthKey = outwardDate.toLocaleString("en-US", { month: "short", year: "numeric" });
+          lastCountMap[monthKey] = row.outward_count; // Store last outward_count per month
+      }
+
+      // Populate final data
+      months.forEach(month => {
+          monthData[month] = lastCountMap[month] || 0;
+      });
+
+      // Return structured response
+      return {
+          station: stationName,
+          fromMonth: fromMonth,
+          fromYear: fromYear,
+          toMonth: toMonth,
+          toYear: toYear,
+          monthLabels: months,
+          monthAggregates: months.map(month => ({
+              month: month,
+              ok_count: monthData[month]
+          }))
+      };
+
   } catch (error) {
-    console.error(`Error fetching monthly data for ${stationName}:`, error.message);
-    throw error;
+      console.error("Error fetching month-wise data:", error.message);
+      throw error;
   }
 };
 
-// Month names array for converting month number to name
-const monthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-];
-
-// Get month name by month index (1-based)
-const getMonthName = (monthIndex) => {
-  return monthNames[monthIndex - 1];  // Convert 1-based month to 0-based index
-};
-
-// Aggregate monthly data for the given date range
-const aggregateMonthlyDataForRange = (data, fromMonth, fromYear, toMonth, toYear) => {
-  const monthlyData = [];
-  let currentYear = fromYear;
-  let currentMonth = fromMonth;
-
-  // Create an empty array for each month in the given range
-  while (
-    currentYear < toYear ||
-    (currentYear === toYear && currentMonth <= toMonth)
-  ) {
-    monthlyData.push({
-      year: currentYear,
-      month: currentMonth,
-      count_sum: 0,  // Initialize count_sum to 0 for each month
-    });
-
-    currentMonth++;
-    if (currentMonth > 12) {
-      currentMonth = 1;
-      currentYear++;
-    }
-  }
-
-  // Aggregate data for each month
-  data.forEach(row => {
-    const monthIndex = (row.year - fromYear) * 12 + (row.month - fromMonth);
-    if (monthIndex >= 0 && monthIndex < monthlyData.length) {
-      monthlyData[monthIndex].count_sum += parseInt(row.count_sum) || 0;  // Aggregate count_sum
-    }
-  });
-
-  // Return the formatted response with month names
-  return monthlyData.map(monthData => ({
-    month: getMonthName(monthData.month),  // Convert month number to name
-    year: monthData.year,  // Year (e.g., 2024)
-    count_sum: monthData.count_sum,  // Total inward_count for the month
-  }));
-};
-
-// API endpoint to fetch monthly grouped data
+// Express Route
 router.post('/:stationName/monthWise', async (req, res) => {
   const { stationName } = req.params;
   const { fromMonth, fromYear, toMonth, toYear } = req.body;
 
-  // Validate input parameters
+  // Validate input
   if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
-    return res.status(400).json({ message: "Station name, fromMonth, fromYear, toMonth, and toYear are required" });
+      return res.status(400).json({ message: "All fields are required" });
   }
 
-  const validStations = ['fg_stocktable_outward'];
+  // Validate station name to prevent SQL injection
+  const validStations = ['fg_stocktable_outward']; // Add more valid station names if needed
   if (!validStations.includes(stationName)) {
-    return res.status(400).json({ message: "Invalid station name" });
-  }
-
-  // Validate month range
-  if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
-    return res.status(400).json({ message: "Invalid month. Please provide a month between 1 and 12." });
-  }
-
-  // Validate from and to date range
-  if (fromYear > toYear || (fromYear === toYear && fromMonth > toMonth)) {
-    return res.status(400).json({ message: "From date must be earlier than to date" });
+      return res.status(400).json({ message: "Invalid station" });
   }
 
   try {
-    // Step 1: Fetch the monthly data for the given range
-    const data = await getMonthlyDataForRange(stationName, fromMonth, fromYear, toMonth, toYear);
-
-    // Step 2: Aggregate the monthly data
-    const aggregatedData = aggregateMonthlyDataForRange(data, fromMonth, fromYear, toMonth, toYear);
-
-    // Step 3: Format the response
-    const formattedResponse = aggregatedData.map(monthData => ({
-      month: `${monthData.month} ${monthData.year}`,  // Combine month and year in the response
-      count_sum: monthData.count_sum,  // Sum of inward_count for the month
-    }));
-
-    const monthLabels = aggregatedData.map(monthData => `${monthData.month} ${monthData.year}`);
-
-    // Send the response
-    res.json({
-      station: stationName,
-      monthLabels,
-      monthSums: formattedResponse
-    });
+      const monthData = await fetchMonthWiseData(stationName, fromMonth, fromYear, toMonth, toYear, stationName);
+      res.json(monthData);
   } catch (error) {
-    console.error(`Error in endpoint /${stationName}/monthWise:`, error.message);
-    res.status(500).json({ message: "Failed to fetch monthly grouped data", error: error.message });
+      console.error("Error processing month-wise request:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-
-
 module.exports = router;
+
+
