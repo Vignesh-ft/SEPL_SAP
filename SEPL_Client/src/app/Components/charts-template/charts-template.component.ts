@@ -350,17 +350,17 @@ export class ChartsTemplateComponent implements OnInit {
 
       if(data.ok_count !== undefined) {
         this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.ok_count);
+        this.hourData1.push(data.ok_count);
       }
 
       if(data.inward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.inward_count);
+        this.toolTipLabel.push("Inward Count")
+        this.hourData1.push(data.inward_count);
       }
 
       if(data.outward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.outward_count);
+        this.toolTipLabel.push("Outward Count")
+        this.hourData1.push(data.outward_count);
       }
 
     })
@@ -419,12 +419,12 @@ export class ChartsTemplateComponent implements OnInit {
       }
 
       if(data.inward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
+        this.toolTipLabel.push("Inward Count")
         this.dayData1.push(data.inward_count);
       }
 
       if(data.outward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
+        this.toolTipLabel.push("Outward Count")
         this.dayData1.push(data.outward_count);
       }
 
@@ -481,17 +481,18 @@ export class ChartsTemplateComponent implements OnInit {
 
       if(data.ok_count !== undefined) {
         this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.ok_count);
+        this.shiftData1.push(data.ok_count);
       }
 
+
       if(data.inward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.inward_count);
+        this.toolTipLabel.push("Inward Count")
+        this.shiftData1.push(data.inward_count);
       }
 
       if(data.outward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.outward_count);
+        this.toolTipLabel.push("Outward Count")
+        this.shiftData1.push(data.outward_count);
       }
 
     })
@@ -517,12 +518,13 @@ export class ChartsTemplateComponent implements OnInit {
 
   monthReport(res:any) {
     this.monthLabel = res.monthLabels
-    // console.log(res);
+    console.log("Response",res);
 
     this.monthData1 = []
     this.monthData2 = []
 
     res.monthSums.map((data:any)=> {
+
       if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
         this.toolTipLabel = ["Rotor Count","Stator Count"]
         this.monthData1.push(data.rotor_sum);
@@ -546,30 +548,23 @@ export class ChartsTemplateComponent implements OnInit {
 
       if(data.ok_count !== undefined) {
         this.toolTipLabel.push("ok count")
-        this.dayData1.push(data.ok_count);
+        this.monthData1.push(data.ok_count);
       }
 
       if(data.inward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.inward_count);
+        this.toolTipLabel.push("Inward Count")
+        this.monthData1.push(data.inward_count);
       }
 
       if(data.outward_count !== undefined) {
-        this.toolTipLabel.push("Count Sum")
-        this.dayData1.push(data.outward_count);
+        this.toolTipLabel.push("Outward Count")
+        this.monthData1.push(data.outward_count);
       }
     })
 
     this.monthData = [this.monthData1, this.monthData2]
-    // console.log(this.monthData);
+    console.log(this.monthData);
   }
-
-
-
-
-
-
-
 
 
   ngOnDestroy(): void {

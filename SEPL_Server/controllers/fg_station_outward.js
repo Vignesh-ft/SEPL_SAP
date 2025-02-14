@@ -286,7 +286,7 @@ const fetchShiftWiseData = async (tableName, selectedDate, stationName) => {
           station: stationName,
           date: selectedDate,
           shiftLabels: ["Shift A", "Shift B", "Shift C"],
-          shiftAggregates: [
+          shiftSums: [
               { shift: "Shift A", ok_count: shiftData["Shift A"] },
               { shift: "Shift B", ok_count: shiftData["Shift B"] },
               { shift: "Shift C", ok_count: shiftData["Shift C"] }
@@ -378,7 +378,7 @@ const fetchMonthWiseData = async (tableName, fromMonth, fromYear, toMonth, toYea
           toMonth: toMonth,
           toYear: toYear,
           monthLabels: months,
-          monthAggregates: months.map(month => ({
+          monthSums: months.map(month => ({
               month: month,
               ok_count: monthData[month]
           }))

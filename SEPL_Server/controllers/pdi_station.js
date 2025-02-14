@@ -397,12 +397,8 @@ router.post('/:stationName/monthWise', async (req, res) => {
     // Return response
     res.json({
       station: stationName,
-      fromMonth,
-      fromYear,
-      toMonth,
-      toYear,
       monthLabels,
-      monthAggregates: monthAggregates.map((item, index) => ({
+      monthSums: monthAggregates.map((item, index) => ({
         month: monthLabels[index],
         ok_count: item.ok_count
       }))
