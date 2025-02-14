@@ -363,6 +363,11 @@ export class ChartsTemplateComponent implements OnInit {
         this.hourData1.push(data.outward_count);
       }
 
+      if(data.entry_count !== undefined) {
+        this.toolTipLabel.push("Count")
+        this.hourData1.push(data.entry_count);
+      }
+
     })
 
     this.hourData = [this.hourData1, this.hourData2]
@@ -426,6 +431,11 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.outward_count !== undefined) {
         this.toolTipLabel.push("Outward Count")
         this.dayData1.push(data.outward_count);
+      }
+
+      if(data.entry_count !== undefined) {
+        this.toolTipLabel.push("Count")
+        this.dayData1.push(data.entry_count);
       }
 
     })
@@ -495,6 +505,11 @@ export class ChartsTemplateComponent implements OnInit {
         this.shiftData1.push(data.outward_count);
       }
 
+      if(data.entry_count !== undefined) {
+        this.toolTipLabel.push("Count")
+        this.shiftData1.push(data.entry_count);
+      }
+
     })
 
     this.shiftData = [this.shiftData1, this.shiftData2]
@@ -524,7 +539,8 @@ export class ChartsTemplateComponent implements OnInit {
     this.monthData2 = []
 
     res.monthSums.map((data:any)=> {
-
+      console.log(data.entry_count);
+      
       if(data.rotor_sum !== undefined && data.stator_sum !== undefined) {
         this.toolTipLabel = ["Rotor Count","Stator Count"]
         this.monthData1.push(data.rotor_sum);
@@ -559,6 +575,11 @@ export class ChartsTemplateComponent implements OnInit {
       if(data.outward_count !== undefined) {
         this.toolTipLabel.push("Outward Count")
         this.monthData1.push(data.outward_count);
+      }
+
+      if(data.entry_count !== undefined) {
+        this.toolTipLabel.push("Count")
+        this.monthData1.push(data.entry_count);
       }
     })
 

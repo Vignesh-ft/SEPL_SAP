@@ -1,422 +1,283 @@
-const { Pool } = require("pg"); // PostgreSQL package
+const { Pool } = require("pg");
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 
 // Database connection configuration for PostgreSQL
 const pool = new Pool({
-    user: process.env.DB_USER,       // Database username
-    host: process.env.DB_HOST,       // Database host
-    database: process.env.DB_NAME,   // Database name
-    password: process.env.DB_PASSWORD, // Database password
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
-    ssl: {
-        rejectUnauthorized: false // Set to true if you have a valid SSL certificate
-    } // Default PostgreSQL port
+    ssl: { rejectUnauthorized: false }
 });
 
+// 🔹 HOURLY COUNT API
+const fetchHourlyData = async (tableName, date, stationName) => {
+    const query = `
+        SELECT 
+            EXTRACT(HOUR FROM inward_time) AS hour,
+            COUNT(*) AS entry_count
+        FROM ${tableName}
+        WHERE inward_date = $1
+        GROUP BY hour
+        ORDER BY hour;
+    `;
 
-const fetchData = async (tableName, date, stationName) => {
-  const query = `
-      SELECT 
-          inward_date, 
-          inward_time, 
-          inward_count 
-      FROM ${tableName}
-      WHERE inward_date = $1
-      ORDER BY inward_time;
-  `;
+    try {
+        const result = await pool.query(query, [date]);
+        const data = result.rows;
 
-  try {
-      const result = await pool.query(query, [date]);
-      const data = result.rows;
+        // Initialize hourlyData with all hours set to 0
+        let hourlyData = [];
+        for (let i = 0; i < 24; i++) {
+            hourlyData.push({ hour: `${String(i).padStart(2, '0')}`, entry_count: 0 });
+        }
 
-      
-      // Initialize hourlyData with all hours set to 0
-      let hourlyData = [];
-      for (let i = 0; i < 24; i++) {
-          hourlyData.push({ hour: i, inward_count: 0 });
-      }
-
-      // Loop through the data and update inward_count for each hour (store last value)
-      for (let row of data) {
-          const fullDate = new Date(row.inward_date);
-          const fullDateTime = new Date(`${fullDate.toISOString().split('T')[0]}T${row.inward_time}`);
-
-          const hour = fullDateTime.getHours();
-
-          // Ensure the hour is valid
-          if (hour >= 0 && hour < 24) {
-              hourlyData[hour].inward_count = row.inward_count;  // Replace previous value with the latest one
-          } else {
-              console.error("Invalid hour:", hour);
-          }
-      }
-
-      // Hourly labels formatted as "HH:00"
-      const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
-          return String(i).padStart(2, '0') + ":00";
-      });
-
-      // Return the structured response
-      return {
-          stationName: stationName,
-          date: date,
-          hourlyLabels: hourlyLabels,
-          hourlyData: hourlyData
-      };
-
-  } catch (error) {
-      console.error("Error fetching data:", error.message);
-      throw error;
-  }
+        // Update with actual data
+        for (let row of data) {
+            const hourIndex = parseInt(row.hour, 10);
+            if (hourIndex >= 0 && hourIndex < 24) {
+                hourlyData[hourIndex].entry_count = parseInt(row.entry_count, 10);
+            }
+        }
+        const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
+            return String(i).padStart(2, '0') + ":00";
+        });
+        return {
+            station: stationName,
+            date: date,
+            hourlyLabels: hourlyLabels,
+            hourlySums: hourlyData
+        };
+    } catch (error) {
+        console.error("Error fetching hourly data:", error.message);
+        throw error;
+    }
 };
-
 
 router.post('/:stationName/hourly', async (req, res) => {
-  const { stationName } = req.params;
-  const { date } = req.body;
+    const { stationName } = req.params;
+    const { date } = req.body;
 
-  // Validate input
-  if (!stationName || !date) {
-    return res.status(400).json({ message: "Station and date are required" });
-  }
-
-  // Validate station name to prevent SQL injection
-  const validStations = ['fg_stocktable_inward'];  // Add more valid station names if needed
-  if (!validStations.includes(stationName)) {
-    return res.status(400).json({ message: "Invalid station" });
-  }
-
-  try {
-    const hourlySums = await fetchData(stationName, date); 
-
-    // If hourlySums is an object with `hourlyData`, access that array
-    const hourlyData = hourlySums.hourlyData || [];
-
-    if (hourlyData.length === 0) {
-      return res.status(404).json({ message: "No data found for the given date" });
+    if (!stationName || !date) {
+        return res.status(400).json({ message: "Station and date are required" });
     }
 
-    // Prepare hourlyLabels
-    const hourlyLabels = [
-      "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
-      "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", 
-      "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
-    ];
-
-    // Initialize the hourlySums structure
-    const formattedHourlySums = hourlyLabels.map(hour => ({
-      hour: hour,  // Maintain the hour label (string format)
-      inward_count: 0  // Initialize with 0
-    }));
-
-    // Fill in the count_sum based on hourlyData
-    hourlyData.forEach(data => {
-      const hourIndex = data.hour;  // Assuming `data.hour` is a number from 0-23
-      if (hourIndex >= 0 && hourIndex < 24) {
-        const formattedHour = String(hourIndex).padStart(2, '0');  // Format hour as a 2-digit string
-        formattedHourlySums[hourIndex].hour = formattedHour;  // Update the hour in formattedHourlySums
-        formattedHourlySums[hourIndex].inward_count = data.inward_count;  // Assign ok_count to the corresponding hour
-      }
-    });
-
-    // Format the response
-    const responseData = {
-      station: stationName,
-      date: date,
-      hourlyLabels: hourlyLabels,
-      hourlySums: formattedHourlySums
-    };
-
-    res.json(responseData);
-
-  } catch (error) {
-    console.error("Error processing the request:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+    try {
+        const data = await fetchHourlyData(stationName, date, stationName);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 });
-const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
-  const query = `
-      SELECT 
-          inward_date, 
-          inward_time, 
-          inward_count 
-      FROM ${tableName}
-      WHERE inward_date BETWEEN $1 AND $2
-      ORDER BY inward_date, inward_time;
-  `;
 
-  try {
-      const result = await pool.query(query, [fromDate, toDate]);
-      const data = result.rows;
+// 🔹 SHIFT-WISE COUNT API
+const fetchShiftWiseData = async (tableName, date, stationName) => {
+    const query = `
+        SELECT 
+            shift,
+            COUNT(*) AS entry_count
+        FROM ${tableName}
+        WHERE inward_date = $1
+        GROUP BY shift
+        ORDER BY shift;
+    `;
 
+    try {
+        const result = await pool.query(query, [date]);
+        const data = result.rows;
 
-      // Generate a list of all dates between fromDate and toDate
-      const start = new Date(fromDate);
-      const end = new Date(toDate);
-      let dateRange = [];
+        let shiftData = { "A": 0, "B": 0, "C": 0 };
 
-      while (start <= end) {
-          let nextDay = new Date(start);
-          nextDay.setDate(nextDay.getDate() + 1); // Increment the date by 1
-          dateRange.push(nextDay.toISOString().split("T")[0]); // Format as YYYY-MM-DD
-          start.setDate(start.getDate() + 1);
-      }
+        // Update with actual counts
+        data.forEach(row => {
+            shiftData[row.shift] = parseInt(row.entry_count, 10);
+        });
 
-      // Initialize dailyAggregates with all dates set to 0
-      let dailyAggregates = dateRange.map(date => ({ date, inward_count: 0 }));
-
-      // Track last inward_count for each date
-      let lastCountMap = {};
-
-      for (let row of data) {
-          let date = new Date(row.inward_date);
-          date.setDate(date.getDate() + 1); // Increment the date by 1
-          const formattedDate = date.toISOString().split("T")[0]; // Extract YYYY-MM-DD
-
-          // Always store the last inward_count for each date
-          lastCountMap[formattedDate] = row.inward_count;
-      }
-
-      // Populate dailyAggregates with actual values
-      dailyAggregates = dailyAggregates.map(item => ({
-          date: item.date,
-          inward_count: lastCountMap[item.date] || 0 // Default to 0 if no data
-      }));
-
-      // Return the structured response
-      return {
-          station: stationName,
-          fromDate: fromDate,
-          toDate: toDate,
-          dailyLabels: dateRange,
-          dailyAggregates: dailyAggregates
-      };
-
-  } catch (error) {
-      console.error("Error fetching data:", error.message);
-      throw error;
-  }
+        return {
+            station: stationName,
+            date: date,
+            shiftLabels: ["Shift A", "Shift B", "Shift C"],
+            shiftSums: [
+                { shift: "Shift A", entry_count: shiftData["A"] },
+                { shift: "Shift B", entry_count: shiftData["B"] },
+                { shift: "Shift C", entry_count: shiftData["C"] }
+            ]
+        };
+    } catch (error) {
+        console.error("Error fetching shift-wise data:", error.message);
+        throw error;
+    }
 };
+
+router.post('/:stationName/shiftWise', async (req, res) => {
+    const { stationName } = req.params;
+    const { date } = req.body;
+
+    if (!stationName || !date) {
+        return res.status(400).json({ message: "Station and date are required" });
+    }
+
+    try {
+        const data = await fetchShiftWiseData(stationName, date, stationName);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// 🔹 DAY-WISE COUNT API
+const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
+    const query = `
+        SELECT 
+            inward_date::TEXT AS date,
+            COUNT(*) AS entry_count
+        FROM ${tableName}
+        WHERE inward_date BETWEEN $1 AND $2
+        GROUP BY inward_date
+        ORDER BY inward_date;
+    `;
+
+    try {
+        const result = await pool.query(query, [fromDate, toDate]);
+        const data = result.rows;
+  
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        let dateRange = [];
+        
+        while (start <= end) {
+            dateRange.push(start.toISOString().split("T")[0]); // Correct date format
+            start.setDate(start.getDate() + 1); // Move forward properly
+        }
+        
+        // Initialize dailyAggregates with all dates set to 0
+        let dailyAggregates = dateRange.map(date => ({ date, entry_count: 0 }));
+
+        // Track last entry_count for each date
+        let lastCountMap = {};
+
+        for (let row of data) {
+            let date = new Date(row.date);
+            date.setDate(date.getDate() ); // Decrement the date by 1 to match correctly
+            const formattedDate = date.toISOString().split("T")[0]; // Extract YYYY-MM-DD
+
+            // Always store the last entry_count for each date
+            lastCountMap[formattedDate] = row.entry_count;
+        }
+
+        // Populate dailyAggregates with actual values
+        dailyAggregates = dailyAggregates.map(item => ({
+            date: item.date,
+            entry_count: lastCountMap[item.date] || 0 // Default to 0 if no data
+        }));
+
+        // Return the structured response
+        return {
+            station: stationName,
+            fromDate: fromDate,
+            toDate: toDate,
+            dailyLabels: dateRange,
+            dailyAggregates: dailyAggregates
+        };
+    } catch (error) {
+        console.error("Error fetching day-wise data:", error.message);
+        throw error;
+    }
+};
+
 
 router.post('/:stationName/dayWise', async (req, res) => {
-  const { stationName } = req.params;
-  const { fromDate, toDate } = req.body;
+    const { stationName } = req.params;
+    const { fromDate, toDate } = req.body;
 
-  // Validate input
-  if (!stationName || !fromDate || !toDate) {
-      return res.status(400).json({ message: "Station, fromDate, and toDate are required" });
-  }
+    if (!stationName || !fromDate || !toDate) {
+        return res.status(400).json({ message: "Station, fromDate, and toDate are required" });
+    }
 
-  // Validate station name to prevent SQL injection
-  const validStations = ['fg_stocktable_inward']; // Add more valid station names if needed
-  if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station" });
-  }
-
-  try {
-      const dailyData = await fetchDayWiseData(stationName, fromDate, toDate, stationName);
-
-
-      res.json(dailyData);
-
-  } catch (error) {
-      console.error("Error processing the request:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
-  }
+    try {
+        const data = await fetchDayWiseData(stationName, fromDate, toDate, stationName);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 });
 
-
-const fetchShiftWiseData = async (tableName, selectedDate, stationName) => {
-  const query = `
-      SELECT 
-          inward_date, 
-          inward_time, 
-          inward_count 
-      FROM ${tableName}
-      WHERE inward_date = $1
-      ORDER BY inward_date, inward_time;
-  `;
-
-  try {
-      const result = await pool.query(query, [selectedDate]);
-      const data = result.rows;
-
-      // Define shifts with the new naming convention
-      const shifts = [
-          { name: "Shift A", start: "06:00:00", end: "13:59:59" },
-          { name: "Shift B", start: "14:00:00", end: "21:59:59" },
-          { name: "Shift C", start: "22:00:00", end: "05:59:59" } // Next day early morning
-      ];
-
-      // Initialize shift-wise data with default 0
-      let shiftData = {
-          "Shift A": 0,
-          "Shift B": 0,
-          "Shift C": 0
-      };
-
-      // Track last inward_count for each shift
-      let lastCountMap = {};
-
-      for (let row of data) {
-          const time = row.inward_time;
-          const inwardCount = row.inward_count;
-
-          // Determine which shift the record belongs to
-          for (let shift of shifts) {
-              if (
-                  (shift.name !== "Shift C" && time >= shift.start && time <= shift.end) ||
-                  (shift.name === "Shift C" && (time >= "22:00:00" || time <= "05:59:59"))
-              ) {
-                  lastCountMap[shift.name] = inwardCount; // Store last count for shift
-              }
-          }
-      }
-
-      // Populate shift-wise aggregates
-      shifts.forEach(shift => {
-          shiftData[shift.name] = lastCountMap[shift.name] || 0; // Default to 0 if no data
-      });
-
-      // Return structured response
-      return {
-          station: stationName,
-          date: selectedDate,
-          shiftLabels: ["Shift A", "Shift B", "Shift C"],
-          shiftSums: [
-              { shift: "Shift A", ok_count: shiftData["Shift A"] },
-              { shift: "Shift B", ok_count: shiftData["Shift B"] },
-              { shift: "Shift C", ok_count: shiftData["Shift C"] }
-          ]
-      };
-
-  } catch (error) {
-      console.error("Error fetching shift-wise data:", error.message);
-      throw error;
-  }
-};
-
-// Express Route
-router.post('/:stationName/shiftWise', async (req, res) => {
-  const { stationName } = req.params;
-  const { date } = req.body;
-
-  // Validate input
-  if (!stationName || !date) {
-      return res.status(400).json({ message: "Station and date are required" });
-  }
-
-  // Validate station name to prevent SQL injection
-  const validStations = ['fg_stocktable_inward']; // Add more valid station names if needed
-  if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station" });
-  }
-
-  try {
-      const shiftData = await fetchShiftWiseData(stationName, date, stationName);
-      res.json(shiftData);
-  } catch (error) {
-      console.error("Error processing shift-wise request:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-
+// MONTH-WISE COUNT API
 const fetchMonthWiseData = async (tableName, fromMonth, fromYear, toMonth, toYear, stationName) => {
-  const query = `
-      SELECT 
-          inward_date, 
-          inward_count
-      FROM ${tableName}
-      WHERE 
-          EXTRACT(YEAR FROM inward_date) BETWEEN $1 AND $2
-      ORDER BY inward_date;
-  `;
+    const query = `
+        SELECT 
+    TO_CHAR(inward_date, 'Mon YYYY') AS month,
+    COUNT(*) AS entry_count
+FROM ${tableName}
+WHERE 
+    (EXTRACT(YEAR FROM inward_date) > $1 OR 
+    (EXTRACT(YEAR FROM inward_date) = $1 AND EXTRACT(MONTH FROM inward_date) >= $3))
+    AND
+    (EXTRACT(YEAR FROM inward_date) < $2 OR
+    (EXTRACT(YEAR FROM inward_date) = $2 AND EXTRACT(MONTH FROM inward_date) <= $4))
+GROUP BY month
+ORDER BY MIN(inward_date);
 
-  try {
-      const result = await pool.query(query, [fromYear, toYear]);
-      const data = result.rows;
+    `;
 
+    try {
+        const result = await pool.query(query, [fromYear, toYear, fromMonth, toMonth]);
+        const data = result.rows;
 
-      // Generate all months in the range
-      let start = new Date(fromYear, fromMonth - 1, 1); // Month index starts from 0
-      let end = new Date(toYear, toMonth, 0); // Last day of the last month
-      let months = [];
+        // Generate all months in the range
+        let start = new Date(fromYear, fromMonth - 1, 1); // Month index starts from 0
+        let end = new Date(toYear, toMonth, 0); // Last day of the last month
+        let months = [];
+        let monthData = {};
 
-      while (start <= end) {
-          let year = start.getFullYear();
-          let monthName = start.toLocaleString("en-US", { month: "short" }); // Convert to "Jan", "Feb"
-          months.push(`${monthName} ${year}`);
-          start.setMonth(start.getMonth() + 1);
-      }
+        // Generate months for the range and initialize monthData to 0
+        while (start <= end) {
+            let year = start.getFullYear();
+            let monthName = start.toLocaleString("en-US", { month: "short" }); // Convert to "Jan", "Feb"
+            let monthKey = `${monthName} ${year}`;
+            months.push(monthKey);
+            monthData[monthKey] = 0; // Initialize with 0 for each month
+            start.setMonth(start.getMonth() + 1);
+        }
 
-      // Initialize monthly data with default 0
-      let monthData = {};
-      months.forEach(month => {
-          monthData[month] = 0;
-      });
+        // Populate monthData with actual entry counts from the query results
+        data.forEach(row => {
+            monthData[row.month] = parseInt(row.entry_count, 10); // Assign entry_count
+        });
 
-      // Track last inward_count per month
-      let lastCountMap = {};
-
-      for (let row of data) {
-          let inwardDate = new Date(row.inward_date);
-          let monthKey = inwardDate.toLocaleString("en-US", { month: "short", year: "numeric" });
-          lastCountMap[monthKey] = row.inward_count; // Store last inward_count per month
-      }
-
-      // Populate final data
-      months.forEach(month => {
-          monthData[month] = lastCountMap[month] || 0;
-      });
-
-      // Return structured response
-      return {
-          station: stationName,
-          fromMonth: fromMonth,
-          fromYear: fromYear,
-          toMonth: toMonth,
-          toYear: toYear,
-          monthLabels: months,
-          monthSums: months.map(month => ({
-              month: month,
-              ok_count: monthData[month]
-          }))
-      };
-
-  } catch (error) {
-      console.error("Error fetching month-wise data:", error.message);
-      throw error;
-  }
+        // Return the structured response
+        return {
+            station: stationName,
+            monthLabels: months,
+            monthSums: months.map(month => ({
+                month,
+                entry_count: monthData[month] // Use 0 if no data is found
+            }))
+        };
+    } catch (error) {
+        console.error("Error fetching month-wise data:", error.message);
+        throw error;
+    }
 };
 
-// Express Route
 router.post('/:stationName/monthWise', async (req, res) => {
-  const { stationName } = req.params;
-  const { fromMonth, fromYear, toMonth, toYear } = req.body;
+    const { stationName } = req.params;
+    const { fromMonth, fromYear, toMonth, toYear } = req.body;
 
-  // Validate input
-  if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
-      return res.status(400).json({ message: "All fields are required" });
-  }
+    if (!stationName || !fromMonth || !fromYear || !toMonth || !toYear) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
 
-  // Validate station name to prevent SQL injection
-  const validStations = ['fg_stocktable_inward']; // Add more valid station names if needed
-  if (!validStations.includes(stationName)) {
-      return res.status(400).json({ message: "Invalid station" });
-  }
-
-  try {
-      const monthData = await fetchMonthWiseData(stationName, fromMonth, fromYear, toMonth, toYear, stationName);
-      res.json(monthData);
-  } catch (error) {
-      console.error("Error processing month-wise request:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
-  }
+    try {
+        const data = await fetchMonthWiseData(stationName, fromMonth, fromYear, toMonth, toYear, stationName);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 });
+
 
 module.exports = router;
-
-
