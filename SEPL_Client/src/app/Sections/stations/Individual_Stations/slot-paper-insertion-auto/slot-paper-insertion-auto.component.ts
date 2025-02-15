@@ -17,7 +17,7 @@ export class SlotPaperInsertionAutoComponent {
 
   // Generate date strings
   currentDateString: string = this.currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-  pastDateString: string = new Date(this.currentDate.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 7 days ago
+  pastDateString: string = new Date(this.currentDate.getTime() - 9 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 7 days ago
 
   // Month and year calculations
   currentMonth: number = this.currentDate.getMonth() + 1; // Add 1 to convert to 1-based month
