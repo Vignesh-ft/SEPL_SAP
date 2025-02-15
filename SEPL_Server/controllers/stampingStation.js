@@ -18,7 +18,8 @@ const fetchHourlyData = async (tableName, date, stationName) => {
     const query = `
         SELECT 
             EXTRACT(HOUR FROM cycle_time_end) AS hour,
-            COUNT(*) AS entry_count
+            COUNT(*) AS stator_count,
+            COUNT(*) AS rotor_count
         FROM ${tableName}
         WHERE date = $1
         GROUP BY hour
@@ -32,19 +33,26 @@ const fetchHourlyData = async (tableName, date, stationName) => {
         // Initialize hourlyData with all hours set to 0
         let hourlyData = [];
         for (let i = 0; i < 24; i++) {
-            hourlyData.push({ hour: `${String(i).padStart(2, '0')}`, entry_count: 0 });
+            hourlyData.push({ 
+                hour: `${String(i).padStart(2, '0')}`, 
+                stator_count: 0, 
+                rotor_count: 0 
+            });
         }
 
         // Update with actual data
         for (let row of data) {
             const hourIndex = parseInt(row.hour, 10);
             if (hourIndex >= 0 && hourIndex < 24) {
-                hourlyData[hourIndex].entry_count = parseInt(row.entry_count, 10);
+                hourlyData[hourIndex].stator_count = parseInt(row.stator_count, 10) || 0;
+                hourlyData[hourIndex].rotor_count = parseInt(row.rotor_count, 10) || 0;
             }
         }
+
         const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
             return String(i).padStart(2, '0') + ":00";
         });
+
         return {
             station: stationName,
             date: date,
@@ -56,6 +64,8 @@ const fetchHourlyData = async (tableName, date, stationName) => {
         throw error;
     }
 };
+
+
 
 router.post('/:stationName/hourly', async (req, res) => {
     const { stationName } = req.params;
@@ -78,7 +88,8 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
     const query = `
         SELECT 
             shift,
-            COUNT(*) AS entry_count
+            COUNT(*) AS stator_count,
+            COUNT(*) AS rotor_count
         FROM ${tableName}
         WHERE date = $1
         GROUP BY shift
@@ -89,11 +100,17 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
         const result = await pool.query(query, [date]);
         const data = result.rows;
 
-        let shiftData = { "A": 0, "B": 0, "C": 0 };
+        let shiftData = { "A": { stator_count: 0, rotor_count: 0 }, 
+                          "B": { stator_count: 0, rotor_count: 0 }, 
+                          "C": { stator_count: 0, rotor_count: 0 } 
+                        };
 
         // Update with actual counts
         data.forEach(row => {
-            shiftData[row.shift] = parseInt(row.entry_count, 10);
+            if (shiftData[row.shift]) {
+                shiftData[row.shift].stator_count = parseInt(row.stator_count, 10);
+                shiftData[row.shift].rotor_count = parseInt(row.rotor_count, 10);
+            }
         });
 
         return {
@@ -101,9 +118,9 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
             date: date,
             shiftLabels: ["Shift A", "Shift B", "Shift C"],
             shiftSums: [
-                { shift: "Shift A", entry_count: shiftData["A"] },
-                { shift: "Shift B", entry_count: shiftData["B"] },
-                { shift: "Shift C", entry_count: shiftData["C"] }
+                { shift: "Shift A", stator_count: shiftData["A"].stator_count, rotor_count: shiftData["A"].rotor_count },
+                { shift: "Shift B", stator_count: shiftData["B"].stator_count, rotor_count: shiftData["B"].rotor_count },
+                { shift: "Shift C", stator_count: shiftData["C"].stator_count, rotor_count: shiftData["C"].rotor_count }
             ]
         };
     } catch (error) {
@@ -133,7 +150,8 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
     const query = `
         SELECT 
             date::TEXT AS date,
-            COUNT(*) AS entry_count
+            COUNT(*) AS stator_count,
+            COUNT(*) AS rotor_count
         FROM ${tableName}
         WHERE date BETWEEN $1 AND $2
         GROUP BY date
@@ -143,7 +161,7 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
     try {
         const result = await pool.query(query, [fromDate, toDate]);
         const data = result.rows;
-  
+
         const start = new Date(fromDate);
         const end = new Date(toDate);
         let dateRange = [];
@@ -152,26 +170,30 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
             dateRange.push(start.toISOString().split("T")[0]); // Correct date format
             start.setDate(start.getDate() + 1); // Move forward properly
         }
-        
-        // Initialize dailyAggregates with all dates set to 0
-        let dailyAggregates = dateRange.map(date => ({ date, entry_count: 0 }));
 
-        // Track last entry_count for each date
+        // Initialize dailyAggregates with all dates set to 0
+        let dailyAggregates = dateRange.map(date => ({ 
+            date, stator_count: 0, rotor_count: 0 
+        }));
+
+        // Track last stator_count and rotor_count for each date
         let lastCountMap = {};
 
         for (let row of data) {
-            let date = new Date(row.date);
-            date.setDate(date.getDate() ); // Decrement the date by 1 to match correctly
-            const formattedDate = date.toISOString().split("T")[0]; // Extract YYYY-MM-DD
+            const formattedDate = row.date;
 
-            // Always store the last entry_count for each date
-            lastCountMap[formattedDate] = row.entry_count;
+            // Always store the last stator_count and rotor_count for each date
+            lastCountMap[formattedDate] = {
+                stator_count: row.stator_count,
+                rotor_count: row.rotor_count
+            };
         }
 
         // Populate dailyAggregates with actual values
         dailyAggregates = dailyAggregates.map(item => ({
             date: item.date,
-            entry_count: lastCountMap[item.date] || 0 // Default to 0 if no data
+            stator_count: lastCountMap[item.date]?.stator_count || 0, // Default to 0 if no data
+            rotor_count: lastCountMap[item.date]?.rotor_count || 0 // Default to 0 if no data
         }));
 
         // Return the structured response
@@ -187,7 +209,6 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
         throw error;
     }
 };
-
 
 router.post('/:stationName/dayWise', async (req, res) => {
     const { stationName } = req.params;
@@ -209,18 +230,18 @@ router.post('/:stationName/dayWise', async (req, res) => {
 const fetchMonthWiseData = async (tableName, fromMonth, fromYear, toMonth, toYear, stationName) => {
     const query = `
      SELECT 
-    TO_CHAR(date::DATE, 'Mon YYYY') AS month,
-    COUNT(*) AS entry_count
-FROM ${tableName}
-WHERE 
-    (EXTRACT(YEAR FROM date::DATE) > $1 OR 
-    (EXTRACT(YEAR FROM date::DATE) = $1 AND EXTRACT(MONTH FROM date::DATE) >= $3))
-    AND
-    (EXTRACT(YEAR FROM date::DATE) < $2 OR
-    (EXTRACT(YEAR FROM date::DATE) = $2 AND EXTRACT(MONTH FROM date::DATE) <= $4))
-GROUP BY month
-ORDER BY MIN(date::DATE);
-
+        TO_CHAR(date::DATE, 'Mon YYYY') AS month,
+        COUNT(*) AS stator_count,
+        COUNT(*) AS rotor_count
+     FROM ${tableName}
+     WHERE 
+        (EXTRACT(YEAR FROM date::DATE) > $1 OR 
+        (EXTRACT(YEAR FROM date::DATE) = $1 AND EXTRACT(MONTH FROM date::DATE) >= $3))
+        AND
+        (EXTRACT(YEAR FROM date::DATE) < $2 OR
+        (EXTRACT(YEAR FROM date::DATE) = $2 AND EXTRACT(MONTH FROM date::DATE) <= $4))
+     GROUP BY month
+     ORDER BY MIN(date::DATE);
     `;
 
     try {
@@ -239,13 +260,16 @@ ORDER BY MIN(date::DATE);
             let monthName = start.toLocaleString("en-US", { month: "short" }); // Convert to "Jan", "Feb"
             let monthKey = `${monthName} ${year}`;
             months.push(monthKey);
-            monthData[monthKey] = 0; // Initialize with 0 for each month
+            monthData[monthKey] = { stator_count: 0, rotor_count: 0 }; // Initialize with 0 for each month
             start.setMonth(start.getMonth() + 1);
         }
 
         // Populate monthData with actual entry counts from the query results
         data.forEach(row => {
-            monthData[row.month] = parseInt(row.entry_count, 10); // Assign entry_count
+            monthData[row.month] = {
+                stator_count: parseInt(row.stator_count, 10),
+                rotor_count: parseInt(row.rotor_count, 10)
+            };
         });
 
         // Return the structured response
@@ -254,7 +278,8 @@ ORDER BY MIN(date::DATE);
             monthLabels: months,
             monthSums: months.map(month => ({
                 month,
-                entry_count: monthData[month] // Use 0 if no data is found
+                stator_count: monthData[month].stator_count, // Use 0 if no data is found
+                rotor_count: monthData[month].rotor_count   // Use 0 if no data is found
             }))
         };
     } catch (error) {
@@ -262,6 +287,7 @@ ORDER BY MIN(date::DATE);
         throw error;
     }
 };
+
 
 router.post('/:stationName/monthWise', async (req, res) => {
     const { stationName } = req.params;

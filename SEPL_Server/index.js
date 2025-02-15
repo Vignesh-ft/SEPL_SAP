@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const { router } = require('./controllers/moController'); // Import processData and router from the controller
+
+const stampingStation = require('./controllers/stampingStation');
 const continuityTestRoutes = require('./controllers/continuity');
 const slot_paper = require('./controllers/slot_paper_insertion');
 const sp_test = require('./controllers/sp_test');
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use(cors());
 
 // Register the router with your Express app
-app.use('/stamping_station', router);
+app.use('/stamping_station', stampingStation);
 app.use('/continuity', continuityTestRoutes);
 app.use('/slot_paper', slot_paper);
 app.use('/sp_test', sp_test);

@@ -18,7 +18,8 @@ const fetchHourlyData = async (tableName, date, stationName) => {
     const query = `
         SELECT 
             EXTRACT(HOUR FROM cycle_time_end) AS hour,
-            COUNT(*) AS entry_count
+            COUNT(CASE WHEN status = 'OK' THEN 1 END) AS ok_count,
+            COUNT(CASE WHEN status = 'NG' THEN 1 END) AS ng_count
         FROM ${tableName}
         WHERE date = $1
         GROUP BY hour
@@ -32,19 +33,22 @@ const fetchHourlyData = async (tableName, date, stationName) => {
         // Initialize hourlyData with all hours set to 0
         let hourlyData = [];
         for (let i = 0; i < 24; i++) {
-            hourlyData.push({ hour: `${String(i).padStart(2, '0')}`, entry_count: 0 });
+            hourlyData.push({ hour: `${String(i).padStart(2, '0')}`, ok_count: 0, ng_count: 0 });
         }
 
         // Update with actual data
         for (let row of data) {
             const hourIndex = parseInt(row.hour, 10);
             if (hourIndex >= 0 && hourIndex < 24) {
-                hourlyData[hourIndex].entry_count = parseInt(row.entry_count, 10);
+                hourlyData[hourIndex].ok_count = parseInt(row.ok_count, 10);
+                hourlyData[hourIndex].ng_count = parseInt(row.ng_count, 10);
             }
         }
+
         const hourlyLabels = Array.from({ length: 24 }, (_, i) => {
             return String(i).padStart(2, '0') + ":00";
         });
+
         return {
             station: stationName,
             date: date,
@@ -56,6 +60,7 @@ const fetchHourlyData = async (tableName, date, stationName) => {
         throw error;
     }
 };
+
 
 router.post('/:stationName/hourly', async (req, res) => {
     const { stationName } = req.params;
@@ -78,7 +83,8 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
     const query = `
         SELECT 
             shift,
-            COUNT(*) AS entry_count
+            COUNT(CASE WHEN status = 'OK' THEN 1 END) AS ok_count,
+            COUNT(CASE WHEN status = 'NG' THEN 1 END) AS ng_count
         FROM ${tableName}
         WHERE date = $1
         GROUP BY shift
@@ -89,11 +95,17 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
         const result = await pool.query(query, [date]);
         const data = result.rows;
 
-        let shiftData = { "A": 0, "B": 0, "C": 0 };
+        // Initialize shift data with all shifts set to 0 for OK and NG counts
+        let shiftData = {
+            "A": { ok_count: 0, ng_count: 0 },
+            "B": { ok_count: 0, ng_count: 0 },
+            "C": { ok_count: 0, ng_count: 0 }
+        };
 
         // Update with actual counts
         data.forEach(row => {
-            shiftData[row.shift] = parseInt(row.entry_count, 10);
+            shiftData[row.shift].ok_count = parseInt(row.ok_count, 10);
+            shiftData[row.shift].ng_count = parseInt(row.ng_count, 10);
         });
 
         return {
@@ -101,9 +113,9 @@ const fetchShiftWiseData = async (tableName, date, stationName) => {
             date: date,
             shiftLabels: ["Shift A", "Shift B", "Shift C"],
             shiftSums: [
-                { shift: "Shift A", entry_count: shiftData["A"] },
-                { shift: "Shift B", entry_count: shiftData["B"] },
-                { shift: "Shift C", entry_count: shiftData["C"] }
+                { shift: "Shift A", ok_count: shiftData["A"].ok_count, ng_count: shiftData["A"].ng_count },
+                { shift: "Shift B", ok_count: shiftData["B"].ok_count, ng_count: shiftData["B"].ng_count },
+                { shift: "Shift C", ok_count: shiftData["C"].ok_count, ng_count: shiftData["C"].ng_count }
             ]
         };
     } catch (error) {
@@ -133,7 +145,8 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
     const query = `
         SELECT 
             date::TEXT AS date,
-            COUNT(*) AS entry_count
+            COUNT(CASE WHEN status = 'OK' THEN 1 END) AS ok_count,
+            COUNT(CASE WHEN status = 'NG' THEN 1 END) AS ng_count
         FROM ${tableName}
         WHERE date BETWEEN $1 AND $2
         GROUP BY date
@@ -153,25 +166,33 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
             start.setDate(start.getDate() + 1); // Move forward properly
         }
         
-        // Initialize dailyAggregates with all dates set to 0
-        let dailyAggregates = dateRange.map(date => ({ date, entry_count: 0 }));
+        // Initialize dailyAggregates with all dates set to 0 for OK and NG counts
+        let dailyAggregates = dateRange.map(date => ({
+            date,
+            ok_count: 0,
+            ng_count: 0
+        }));
 
-        // Track last entry_count for each date
+        // Track last ok_count and ng_count for each date
         let lastCountMap = {};
 
         for (let row of data) {
             let date = new Date(row.date);
-            date.setDate(date.getDate() ); // Decrement the date by 1 to match correctly
+            date.setDate(date.getDate()); // Decrement the date by 1 to match correctly
             const formattedDate = date.toISOString().split("T")[0]; // Extract YYYY-MM-DD
 
-            // Always store the last entry_count for each date
-            lastCountMap[formattedDate] = row.entry_count;
+            // Always store the last ok_count and ng_count for each date
+            lastCountMap[formattedDate] = {
+                ok_count: row.ok_count,
+                ng_count: row.ng_count
+            };
         }
 
         // Populate dailyAggregates with actual values
         dailyAggregates = dailyAggregates.map(item => ({
             date: item.date,
-            entry_count: lastCountMap[item.date] || 0 // Default to 0 if no data
+            ok_count: lastCountMap[item.date]?.ok_count || 0, // Default to 0 if no data
+            ng_count: lastCountMap[item.date]?.ng_count || 0  // Default to 0 if no data
         }));
 
         // Return the structured response
@@ -187,7 +208,6 @@ const fetchDayWiseData = async (tableName, fromDate, toDate, stationName) => {
         throw error;
     }
 };
-
 
 router.post('/:stationName/dayWise', async (req, res) => {
     const { stationName } = req.params;
@@ -208,26 +228,25 @@ router.post('/:stationName/dayWise', async (req, res) => {
 // MONTH-WISE COUNT API
 const fetchMonthWiseData = async (tableName, fromMonth, fromYear, toMonth, toYear, stationName) => {
     const query = `
-        SELECT 
-    TO_CHAR(date, 'Mon YYYY') AS month,
-    COUNT(*) AS entry_count
-FROM ${tableName}
-WHERE 
-    (EXTRACT(YEAR FROM date) > $1 OR 
-    (EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM outward_date) >= $3))
-    AND
-    (EXTRACT(YEAR FROM date) < $2 OR
-    (EXTRACT(YEAR FROM outward_date) = $2 AND EXTRACT(MONTH FROM outward_date) <= $4))
-GROUP BY month
-ORDER BY MIN(outward_date);
-
+     SELECT 
+        TO_CHAR(date::DATE, 'Mon YYYY') AS month,
+        COUNT(CASE WHEN status = 'OK' THEN 1 END) AS ok_count,
+        COUNT(CASE WHEN status = 'NG' THEN 1 END) AS ng_count
+    FROM ${tableName}
+    WHERE 
+        (EXTRACT(YEAR FROM date::DATE) > $1 OR 
+        (EXTRACT(YEAR FROM date::DATE) = $1 AND EXTRACT(MONTH FROM date::DATE) >= $3))
+        AND
+        (EXTRACT(YEAR FROM date::DATE) < $2 OR
+        (EXTRACT(YEAR FROM date::DATE) = $2 AND EXTRACT(MONTH FROM date::DATE) <= $4))
+    GROUP BY month
+    ORDER BY MIN(date::DATE);
     `;
 
     try {
         const result = await pool.query(query, [fromYear, toYear, fromMonth, toMonth]);
         const data = result.rows;
 
-        console.log(data)
         // Generate all months in the range
         let start = new Date(fromYear, fromMonth - 1, 1); // Month index starts from 0
         let end = new Date(toYear, toMonth, 0); // Last day of the last month
@@ -240,13 +259,16 @@ ORDER BY MIN(outward_date);
             let monthName = start.toLocaleString("en-US", { month: "short" }); // Convert to "Jan", "Feb"
             let monthKey = `${monthName} ${year}`;
             months.push(monthKey);
-            monthData[monthKey] = 0; // Initialize with 0 for each month
+            monthData[monthKey] = { ok_count: 0, ng_count: 0 }; // Initialize with 0 for each month
             start.setMonth(start.getMonth() + 1);
         }
 
-        // Populate monthData with actual entry counts from the query results
+        // Populate monthData with actual counts from the query results
         data.forEach(row => {
-            monthData[row.month] = parseInt(row.entry_count, 10); // Assign entry_count
+            monthData[row.month] = {
+                ok_count: row.ok_count,
+                ng_count: row.ng_count
+            };
         });
 
         // Return the structured response
@@ -255,7 +277,8 @@ ORDER BY MIN(outward_date);
             monthLabels: months,
             monthSums: months.map(month => ({
                 month,
-                entry_count: monthData[month] // Use 0 if no data is found
+                ok_count: monthData[month].ok_count, // OK count for the month
+                ng_count: monthData[month].ng_count  // NG count for the month
             }))
         };
     } catch (error) {
